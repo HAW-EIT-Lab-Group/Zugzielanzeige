@@ -1,166 +1,207 @@
 /**
- * main.cpp
+ * Einzelkabel-Test für die 64×200 Bi-Color LED-Matrix (Zugzielanzeige)
  *
- * Demo-Anwendung für die 64×200-Bi-Color-LED-Matrix (Zugzielanzeige).
+ * Testet ein einzelnes Flachbandkabel (16 Zeilen × 200 Spalten).
+ * Die Muster wechseln alle paar Sekunden automatisch; über Serial kann
+ * der aktuelle Zustand mitgelesen werden (115200 Baud).
  *
- * Zeigt eine Abfolge von Testmustern, um die Hardware-Verdrahtung zu
- * überprüfen und die Leistungsfähigkeit des Treibers zu demonstrieren:
- *
- *   1. Farbbalken          – prüft alle drei Farben flächig
- *   2. Schachbrettmuster   – prüft alternierend jeden einzelnen Pixel
- *   3. Rahmentest          – prüft Rechteck-Ausgabe an den Display-Grenzen
- *   4. Bouncing Ball       – ISR-betriebene Animation (zeigt Interrupt-Refresh)
- *
- * Die Muster wechseln automatisch alle DEMO_INTERVAL_MS Millisekunden.
- * Während des Bouncing-Ball-Demos läuft der Display-Refresh im Hintergrund
- * via Timer1-ISR; die Hauptschleife kümmert sich nur um die Spiellogik.
+ * Testmuster-Reihenfolge:
+ *   1. Alle LEDs Grün       – Datenpfad grün OK?
+ *   2. Alle LEDs Rot        – Datenpfad rot OK?
+ *   3. Alle LEDs Orange     – beide Kanäle gleichzeitig OK?
+ *   4. Schachbrett G/R      – Spaltenauflösung OK?
+ *   5. Zeilenläufer         – alle 16 Zeilen einzeln, Zeilenadressierung OK?
+ *   6. Spaltenläufer        – einzelne Spalte wandert, Takt/Latch OK?
  */
 
 #include <Arduino.h>
-#include "MatrixDisplay.h"
 
-static constexpr uint32_t DEMO_INTERVAL_MS = 4000; // Anzeigezeit je Muster
+// ─── Pin-Definitionen ─────────────────────────────────────────────────────────
 
-MatrixDisplay display;
+#define PIN_G   22   // Data Green
+#define PIN_R   24   // Data Red
+#define PIN_CLK 26   // Clock (Schieberegister-Takt)
+#define PIN_LAT 28   // Latch (Datenübernahme/Strobe)
+// Arduino Mega definiert PIN_A0–A7 bereits für Analogpins – überschreiben
+#undef PIN_A0
+#undef PIN_A1
+#undef PIN_A2
+#define PIN_A0  30   // Zeilenadresse Bit 0
+#define PIN_A1  32   // Zeilenadresse Bit 1
+#define PIN_A2  34   // Zeilenadresse Bit 2
+#define PIN_CS  36   // Chip-Select: LOW = Zeilen 0–7, HIGH = Zeilen 8–15
+#define PIN_EN1 38   // Enable / Helligkeit 1
+#define PIN_EN2 39   // Enable / Helligkeit 2
 
-// ─── Testmuster ───────────────────────────────────────────────────────────────
+// ─── Display-Konstanten ───────────────────────────────────────────────────────
 
-/** Drei horizontale Farbbalken (Grün / Orange / Rot). */
-static void patternColorBars() {
-    constexpr uint8_t thirdH = MATRIX_ROWS / 3;
+static constexpr uint16_t NUM_COLS    = 200; // Spalten pro Zeile
+static constexpr uint8_t  NUM_ROWS    = 16;  // Zeilen pro Flachbandkabel
+static constexpr uint16_t PATTERN_MS  = 4000; // Anzeigedauer pro Muster (ms)
 
-    display.fillRect(0, 0,          MATRIX_COLS, thirdH,              Color::GREEN);
-    display.fillRect(0, thirdH,     MATRIX_COLS, thirdH,              Color::ORANGE);
-    display.fillRect(0, 2 * thirdH, MATRIX_COLS, MATRIX_ROWS - 2 * thirdH, Color::RED);
+// ─── Niederpegel-Hilfsfunktionen ──────────────────────────────────────────────
+
+/**
+ * Zeilenadresse setzen.
+ * row 0–7:  CS=LOW,  A0/A1/A2 = row
+ * row 8–15: CS=HIGH, A0/A1/A2 = row - 8
+ */
+static void setRowAddr(uint8_t row) {
+    uint8_t addr = row & 0x07; // untere 3 Bits
+    digitalWrite(PIN_A0, (addr & 0x01) ? HIGH : LOW);
+    digitalWrite(PIN_A1, (addr & 0x02) ? HIGH : LOW);
+    digitalWrite(PIN_A2, (addr & 0x04) ? HIGH : LOW);
+    digitalWrite(PIN_CS,  row >= 8     ? HIGH : LOW);
 }
 
-/** Schachbrettmuster, abwechselnd Grün und Rot. */
-static void patternCheckerboard() {
-    for (uint8_t y = 0; y < MATRIX_ROWS; ++y) {
-        for (uint16_t x = 0; x < MATRIX_COLS; ++x) {
-            display.setPixel(x, y, ((x ^ y) & 1u) ? Color::RED : Color::GREEN);
-        }
+/** Latch-Impuls: Schieberegister-Inhalt in Ausgangslatch übernehmen. */
+static void latchData() {
+    digitalWrite(PIN_LAT, HIGH);
+    digitalWrite(PIN_LAT, LOW);
+}
+
+/**
+ * Display ein- oder ausschalten.
+ * Hinweis: Falls das Display aktiv-low ist, HIGH/LOW hier vertauschen.
+ */
+static void enableDisplay(bool on) {
+    digitalWrite(PIN_EN1, on ? HIGH : LOW);
+    digitalWrite(PIN_EN2, on ? HIGH : LOW);
+}
+
+/**
+ * Einen CLK-Impuls erzeugen und dabei die Datenpins setzen.
+ * Wird für jede Spalte einmal aufgerufen.
+ */
+static inline void clockBit(bool green, bool red) {
+    digitalWrite(PIN_G,   green ? HIGH : LOW);
+    digitalWrite(PIN_R,   red   ? HIGH : LOW);
+    digitalWrite(PIN_CLK, HIGH);
+    digitalWrite(PIN_CLK, LOW);
+}
+
+// ─── Scan-Funktion ────────────────────────────────────────────────────────────
+
+/**
+ * Eine Zeile vollständig ausgeben.
+ *
+ * @param row    Zeilennummer 0–15
+ * @param green  Callback: liefert true wenn Spalte col grün sein soll
+ * @param red    Callback: liefert true wenn Spalte col rot sein soll
+ *
+ * Ablauf: Enable aus → 200 Bits einschieben → Adresse setzen → Latch → Enable an
+ */
+static void scanRow(uint8_t row,
+                    bool (*green)(uint8_t row, uint16_t col),
+                    bool (*red  )(uint8_t row, uint16_t col))
+{
+    enableDisplay(false); // Ausgabe sperren – verhindert Geisterbilder
+
+    for (uint16_t col = 0; col < NUM_COLS; ++col) {
+        clockBit(green(row, col), red(row, col));
+    }
+
+    setRowAddr(row);
+    latchData();
+    enableDisplay(true);
+}
+
+/**
+ * Alle 16 Zeilen einmal durchscannen (ein komplettes Frame).
+ * Wartet zwischen den Zeilen rowDwellUs Mikrosekunden.
+ */
+static void refreshFrame(bool (*green)(uint8_t, uint16_t),
+                          bool (*red  )(uint8_t, uint16_t),
+                          uint16_t rowDwellUs = 300)
+{
+    for (uint8_t row = 0; row < NUM_ROWS; ++row) {
+        scanRow(row, green, red);
+        if (rowDwellUs) delayMicroseconds(rowDwellUs);
     }
 }
 
-/** Doppelter Rahmen: äußerer in Grün, innerer in Rot. */
-static void patternBorders() {
-    display.drawRect(0, 0, MATRIX_COLS, MATRIX_ROWS, Color::GREEN);
-    display.drawRect(2, 2, MATRIX_COLS - 4, MATRIX_ROWS - 4, Color::RED);
-}
+// ─── Testmuster-Datenfunktionen ───────────────────────────────────────────────
 
-// ─── Bouncing-Ball-Demo ───────────────────────────────────────────────────────
+// Alle Pixel grün
+static bool allGreen (uint8_t, uint16_t) { return true;  }
+static bool allRed   (uint8_t, uint16_t) { return true;  }
+static bool noPixel  (uint8_t, uint16_t) { return false; }
 
-struct Ball {
-    int16_t x, y;    // Position (Festpunktzahl, ×4 Sub-Pixel für weichere Bewegung)
-    int8_t  dx, dy;  // Geschwindigkeit (Sub-Pixel pro Schritt)
-};
+// Schachbrett: gerade Spalten grün in geraden Zeilen, ungerade Spalten grün in ungeraden
+static bool chessGreen(uint8_t row, uint16_t col) { return ((col + row) & 1) == 0; }
+static bool chessRed  (uint8_t row, uint16_t col) { return ((col + row) & 1) == 1; }
 
-/** Ein Pixel an Sub-Pixel-Position (x/4, y/4) zeichnen. */
-static void ballSetPixel(int16_t subX, int16_t subY, Color color) {
-    display.setPixel(static_cast<uint16_t>(subX >> 2),
-                     static_cast<uint8_t> (subY >> 2),
-                     color);
-}
+// Zeilenläufer: nur die aktuelle Laufzeile leuchtet
+static uint8_t  walkRow = 0;
+static bool rowWalkGreen(uint8_t row, uint16_t)     { return row == walkRow; }
+static bool rowWalkRed  (uint8_t row, uint16_t col) { return row == walkRow && (col & 1); }
 
-/** Bouncing-Ball-Animation – läuft im Vordergrund, ISR übernimmt Display-Refresh. */
-static void demoBouncing() {
-    Ball ball = { 4,  4,  3,  2 }; // Startposition und -geschwindigkeit
-    Ball ball2 = { (MATRIX_COLS - 1) * 4, (MATRIX_ROWS - 1) * 4, -2, 3 };
+// Spaltenläufer: eine einzelne Spalte wandert durch alle 200 Positionen
+static uint16_t walkCol = 0;
+static bool colWalkGreen(uint8_t, uint16_t col) { return col == walkCol; }
+static bool colWalkRed  (uint8_t, uint16_t col) { return col == walkCol; }
 
-    const uint32_t endTime = millis() + DEMO_INTERVAL_MS;
+// ─── Testmuster-Schleife ──────────────────────────────────────────────────────
 
-    while (millis() < endTime) {
-        // Alten Ball-Pixel löschen
-        ballSetPixel(ball.x,  ball.y,  Color::OFF);
-        ballSetPixel(ball2.x, ball2.y, Color::OFF);
+/**
+ * Wiederholt refreshFrame für PATTERN_MS Millisekunden.
+ * Zwischen jedem Frame kann optionale Logik (update) ausgeführt werden.
+ */
+static void runPattern(const char* name,
+                       bool (*green)(uint8_t, uint16_t),
+                       bool (*red  )(uint8_t, uint16_t),
+                       void (*update)() = nullptr)
+{
+    Serial.print(F("Muster: "));
+    Serial.println(name);
 
-        // Positionen aktualisieren
-        ball.x  += ball.dx;
-        ball.y  += ball.dy;
-        ball2.x += ball2.dx;
-        ball2.y += ball2.dy;
-
-        // Wandkollision X (0 … (MATRIX_COLS-1)*4)
-        constexpr int16_t maxX = static_cast<int16_t>((MATRIX_COLS - 1) * 4);
-        constexpr int16_t maxY = static_cast<int16_t>((MATRIX_ROWS - 1) * 4);
-
-        if (ball.x <= 0)    { ball.x = 0;    ball.dx = -ball.dx; }
-        if (ball.x >= maxX) { ball.x = maxX; ball.dx = -ball.dx; }
-        if (ball.y <= 0)    { ball.y = 0;    ball.dy = -ball.dy; }
-        if (ball.y >= maxY) { ball.y = maxY; ball.dy = -ball.dy; }
-
-        if (ball2.x <= 0)    { ball2.x = 0;    ball2.dx = -ball2.dx; }
-        if (ball2.x >= maxX) { ball2.x = maxX; ball2.dx = -ball2.dx; }
-        if (ball2.y <= 0)    { ball2.y = 0;    ball2.dy = -ball2.dy; }
-        if (ball2.y >= maxY) { ball2.y = maxY; ball2.dy = -ball2.dy; }
-
-        // Neue Ball-Position zeichnen
-        ballSetPixel(ball.x,  ball.y,  Color::GREEN);
-        ballSetPixel(ball2.x, ball2.y, Color::RED);
-
-        // ISR übernimmt Refresh – kurze Pause damit Geschwindigkeit sichtbar ist
-        delay(10);
+    uint32_t end = millis() + PATTERN_MS;
+    while (millis() < end) {
+        refreshFrame(green, red);
+        if (update) update();
     }
 }
 
-// ─── Demo-Sequenz ─────────────────────────────────────────────────────────────
+// Update-Callbacks für die laufenden Muster
+static void nextWalkRow() {
+    static uint32_t lastStep = 0;
+    if (millis() - lastStep > 200) { // alle 200 ms eine Zeile weiter
+        walkRow = (walkRow + 1) % NUM_ROWS;
+        lastStep = millis();
+    }
+}
 
-static void runDemo() {
-    // ── 1. Farbbalken ──
-    Serial.println(F("Muster: Farbbalken"));
-    display.clear();
-    patternColorBars();
-
-    display.enableInterruptDriven(false);
-    const uint32_t t1 = millis() + DEMO_INTERVAL_MS;
-    while (millis() < t1) display.refresh();
-
-    // ── 2. Schachbrett ──
-    Serial.println(F("Muster: Schachbrett"));
-    display.clear();
-    patternCheckerboard();
-
-    const uint32_t t2 = millis() + DEMO_INTERVAL_MS;
-    while (millis() < t2) display.refresh();
-
-    // ── 3. Rahmen ──
-    Serial.println(F("Muster: Rahmen"));
-    display.clear();
-    patternBorders();
-
-    const uint32_t t3 = millis() + DEMO_INTERVAL_MS;
-    while (millis() < t3) display.refresh();
-
-    // ── 4. Bouncing Ball (ISR-betrieben) ──
-    Serial.println(F("Muster: Bouncing Ball (Timer-ISR)"));
-    display.clear();
-    display.enableInterruptDriven(true);  // ab jetzt übernimmt Timer1 den Refresh
-    demoBouncing();
-    display.enableInterruptDriven(false);
+static void nextWalkCol() {
+    static uint32_t lastStep = 0;
+    if (millis() - lastStep > 15) { // alle 15 ms eine Spalte weiter
+        walkCol = (walkCol + 1) % NUM_COLS;
+        lastStep = millis();
+    }
 }
 
 // ─── Arduino-Einstiegspunkte ──────────────────────────────────────────────────
 
 void setup() {
     Serial.begin(115200);
-    Serial.println(F("=== Zugzielanzeige Matrix-LED Treiber ==="));
-    Serial.print(F("Aufloesung: "));
-    Serial.print(MATRIX_COLS);
-    Serial.print(F(" x "));
-    Serial.println(MATRIX_ROWS);
-    Serial.print(F("Panels: "));
-    Serial.println(MATRIX_NUM_PANELS);
+    Serial.println(F("=== Zugzielanzeige Einzelkabel-Test ==="));
+    Serial.print(F("Spalten: ")); Serial.println(NUM_COLS);
+    Serial.print(F("Zeilen:  ")); Serial.println(NUM_ROWS);
 
-    display.begin();
-    display.setBrightness(3);
-
-    // Kurzen Selbsttest ausgeben: alle LEDs kurz an
-    display.clear(Color::ORANGE);
-    display.refresh(500); // 500 µs pro Zeile → ~8 ms sichtbarer Aufleuchter
-    display.clear();
+    // Alle Pins als Ausgang konfigurieren und sicher auf LOW setzen
+    const uint8_t pins[] = { PIN_G, PIN_R, PIN_CLK, PIN_LAT,
+                              PIN_A0, PIN_A1, PIN_A2, PIN_CS,
+                              PIN_EN1, PIN_EN2 };
+    for (uint8_t p : pins) {
+        pinMode(p, OUTPUT);
+        digitalWrite(p, LOW);
+    }
 }
 
 void loop() {
-    runDemo();
+    runPattern("Alle Gruen",   allGreen,    noPixel);
+    runPattern("Alle Rot",     noPixel,     allRed);
+    runPattern("Alle Orange",  allGreen,    allRed);
+    runPattern("Schachbrett",  chessGreen,  chessRed);
+    runPattern("Zeilenlaeufer", rowWalkGreen, rowWalkRed, nextWalkRow);
+    runPattern("Spaltenlaeufer", colWalkGreen, colWalkRed, nextWalkCol);
 }

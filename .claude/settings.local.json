@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(cd \"C:\\\\Users\\\\fisle\\\\zugzielanzeige_matrixLED\\\\.claude\\\\worktrees\\\\charming-archimedes-e36cc1\"; & \"$env:USERPROFILE\\\\.platformio\\\\penv\\\\Scripts\\\\pio.exe\" run 2>&1 | Select-String -Pattern \"warning|error|SUCCESS|FAILED|RAM|Flash\")",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
+    ]
+  }
+}
