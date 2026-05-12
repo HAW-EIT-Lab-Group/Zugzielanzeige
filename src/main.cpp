@@ -65,8 +65,9 @@ static void latchData() {
  * Hinweis: Falls das Display aktiv-low ist, HIGH/LOW hier vertauschen.
  */
 static void enableDisplay(bool on) {
-    digitalWrite(PIN_EN1, on ? HIGH : LOW);
-    digitalWrite(PIN_EN2, on ? HIGH : LOW);
+    // Enable-Pins sind aktiv-low: LOW = an, HIGH = aus
+    digitalWrite(PIN_EN1, on ? LOW : HIGH);
+    digitalWrite(PIN_EN2, on ? LOW : HIGH);
 }
 
 /**
