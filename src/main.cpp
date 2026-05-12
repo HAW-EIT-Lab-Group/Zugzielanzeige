@@ -194,52 +194,40 @@ void setup() {
     // EN1/EN2 dauerhaft LOW – nicht mehr anfassen
 }
 
-// ─── Kombinations-Test ────────────────────────────────────────────────────────
-// Probiert alle Kombinationen von Enable-Polarität und CS-Polarität durch.
-// Jede Kombination leuchtet 1 Sekunde – Serial Monitor zeigt welche gerade läuft.
+// ─── Einzel-Zeilen-Test ───────────────────────────────────────────────────────
+// Zeile 0 einmal einschalten – Latch hält den Zustand dauerhaft.
+// TEST_ZEILE ändern und neu flashen um andere Zeilen zu testen.
+#define TEST_ZEILE 0
 
-struct Combo {
-    const char* name;
-    bool enOnHigh; // true = EN HIGH ist "an", false = EN LOW ist "an"
-    bool csLowFor0; // true = CS LOW für Zeilen 0-7, false = CS HIGH für Zeilen 0-7
-};
+void setup() {
+    Serial.begin(115200);
 
-static const Combo combos[] = {
-    { "EN=HIGH-an  CS=LOW-fuer-0-7",  true,  true  },
-    { "EN=HIGH-an  CS=HIGH-fuer-0-7", true,  false },
-    { "EN=LOW-an   CS=LOW-fuer-0-7",  false, true  },
-    { "EN=LOW-an   CS=HIGH-fuer-0-7", false, false },
-};
+    const uint8_t pins[] = { PIN_G, PIN_R, PIN_CLK, PIN_LAT,
+                              PIN_A0, PIN_A1, PIN_A2, PIN_CS,
+                              PIN_EN1, PIN_EN2 };
+    for (uint8_t p : pins) {
+        pinMode(p, OUTPUT);
+        digitalWrite(p, LOW);
+    }
+
+    // 200 Bits einschieben – alle Spalten orange (grün + rot)
+    for (uint16_t col = 0; col < NUM_COLS; col++) {
+        clockBit(true, true);
+    }
+
+    // Zeilenadresse setzen
+    setRowAddr(TEST_ZEILE);
+
+    // Latch – Daten bleiben jetzt dauerhaft im Ausgangsregister
+    latchData();
+
+    // Enable einschalten – ab hier hält der Latch alles, kein loop nötig
+    digitalWrite(PIN_EN1, HIGH);
+    digitalWrite(PIN_EN2, HIGH);
+
+    Serial.println(F("Zeile gesetzt – Latch haelt den Zustand."));
+}
 
 void loop() {
-    for (const Combo& c : combos) {
-        Serial.print(F("Teste: ")); Serial.println(c.name);
-
-        // Daten einschieben
-        for (uint16_t col = 0; col < NUM_COLS; col++) {
-            clockBit(true, true); // Orange
-        }
-
-        // Zeilenadresse 0 setzen mit dieser CS-Polarität
-        digitalWrite(PIN_A0, LOW);
-        digitalWrite(PIN_A1, LOW);
-        digitalWrite(PIN_A2, LOW);
-        digitalWrite(PIN_CS, c.csLowFor0 ? LOW : HIGH);
-
-        latchData();
-
-        // Enable auf "an" schalten
-        uint8_t enOn = c.enOnHigh ? HIGH : LOW;
-        digitalWrite(PIN_EN1, enOn);
-        digitalWrite(PIN_EN2, enOn);
-
-        delay(1000); // 1 Sekunde leuchten lassen
-
-        // Enable aus
-        uint8_t enOff = c.enOnHigh ? LOW : HIGH;
-        digitalWrite(PIN_EN1, enOff);
-        digitalWrite(PIN_EN2, enOff);
-
-        delay(300); // kurze Pause zwischen Kombinationen
-    }
+    // leer – Latch haelt den Zustand ohne weiteren Code
 }
