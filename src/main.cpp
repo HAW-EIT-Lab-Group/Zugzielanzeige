@@ -197,11 +197,21 @@ void setup() {
     }
 }
 
+// ─── Debug: einzelne Zeile dauerhaft anzeigen ────────────────────────────────
+
+// Hier die Zeile einstellen die leuchten soll (0 bis 15), dann neu flashen
+#define TEST_ZEILE 0
+
 void loop() {
-    runPattern("Alle Gruen",   allGreen,    noPixel);
-    runPattern("Alle Rot",     noPixel,     allRed);
-    runPattern("Alle Orange",  allGreen,    allRed);
-    runPattern("Schachbrett",  chessGreen,  chessRed);
-    runPattern("Zeilenlaeufer", rowWalkGreen, rowWalkRed, nextWalkRow);
-    runPattern("Spaltenlaeufer", colWalkGreen, colWalkRed, nextWalkCol);
+    // Eine einzelne Zeile konstant anzeigen – zum Debuggen der Zeilenadressierung.
+    // TEST_ZEILE ändern und neu flashen um jede Zeile einzeln zu prüfen.
+    enableDisplay(false);
+
+    for (uint16_t col = 0; col < NUM_COLS; col++) {
+        clockBit(true, true); // Orange: beide Farbkanäle an
+    }
+
+    setRowAddr(TEST_ZEILE);
+    latchData();
+    enableDisplay(true);
 }
