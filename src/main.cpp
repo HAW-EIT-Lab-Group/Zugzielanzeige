@@ -194,21 +194,52 @@ void setup() {
     // EN1/EN2 dauerhaft LOW – nicht mehr anfassen
 }
 
-// ─── Debug: einzelne Zeile dauerhaft anzeigen ────────────────────────────────
+// ─── Kombinations-Test ────────────────────────────────────────────────────────
+// Probiert alle Kombinationen von Enable-Polarität und CS-Polarität durch.
+// Jede Kombination leuchtet 1 Sekunde – Serial Monitor zeigt welche gerade läuft.
 
-// Hier die Zeile einstellen die leuchten soll (0 bis 15), dann neu flashen
-#define TEST_ZEILE 0
+struct Combo {
+    const char* name;
+    bool enOnHigh; // true = EN HIGH ist "an", false = EN LOW ist "an"
+    bool csLowFor0; // true = CS LOW für Zeilen 0-7, false = CS HIGH für Zeilen 0-7
+};
+
+static const Combo combos[] = {
+    { "EN=HIGH-an  CS=LOW-fuer-0-7",  true,  true  },
+    { "EN=HIGH-an  CS=HIGH-fuer-0-7", true,  false },
+    { "EN=LOW-an   CS=LOW-fuer-0-7",  false, true  },
+    { "EN=LOW-an   CS=HIGH-fuer-0-7", false, false },
+};
 
 void loop() {
-    enableDisplay(false);
+    for (const Combo& c : combos) {
+        Serial.print(F("Teste: ")); Serial.println(c.name);
 
-    for (uint16_t col = 0; col < NUM_COLS; col++) {
-        clockBit(true, true); // Orange: beide Farbkanäle an
+        // Daten einschieben
+        for (uint16_t col = 0; col < NUM_COLS; col++) {
+            clockBit(true, true); // Orange
+        }
+
+        // Zeilenadresse 0 setzen mit dieser CS-Polarität
+        digitalWrite(PIN_A0, LOW);
+        digitalWrite(PIN_A1, LOW);
+        digitalWrite(PIN_A2, LOW);
+        digitalWrite(PIN_CS, c.csLowFor0 ? LOW : HIGH);
+
+        latchData();
+
+        // Enable auf "an" schalten
+        uint8_t enOn = c.enOnHigh ? HIGH : LOW;
+        digitalWrite(PIN_EN1, enOn);
+        digitalWrite(PIN_EN2, enOn);
+
+        delay(1000); // 1 Sekunde leuchten lassen
+
+        // Enable aus
+        uint8_t enOff = c.enOnHigh ? LOW : HIGH;
+        digitalWrite(PIN_EN1, enOff);
+        digitalWrite(PIN_EN2, enOff);
+
+        delay(300); // kurze Pause zwischen Kombinationen
     }
-
-    setRowAddr(TEST_ZEILE);
-    latchData();
-    enableDisplay(true);
-
-    delay(500);
 }
