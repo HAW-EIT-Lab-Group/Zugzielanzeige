@@ -60,14 +60,9 @@ static void latchData() {
     digitalWrite(PIN_LAT, LOW);
 }
 
-/**
- * Display ein- oder ausschalten.
- * Hinweis: Falls das Display aktiv-low ist, HIGH/LOW hier vertauschen.
- */
-static void enableDisplay(bool on) {
-    digitalWrite(PIN_EN1, on ? HIGH : LOW);
-    digitalWrite(PIN_EN2, on ? HIGH : LOW);
-}
+// EN1 = Rot aktivieren, EN2 = Grün aktivieren
+static void enableRed  (bool on) { digitalWrite(PIN_EN1, on ? HIGH : LOW); }
+static void enableGreen(bool on) { digitalWrite(PIN_EN2, on ? HIGH : LOW); }
 
 /**
  * Einen CLK-Impuls erzeugen und dabei die Datenpins setzen.
@@ -95,7 +90,8 @@ static void scanRow(uint8_t row,
                     bool (*green)(uint8_t row, uint16_t col),
                     bool (*red  )(uint8_t row, uint16_t col))
 {
-    enableDisplay(false); // Ausgabe sperren – verhindert Geisterbilder
+    enableGreen(false);
+    enableRed(false);
 
     for (uint16_t col = 0; col < NUM_COLS; ++col) {
         clockBit(green(row, col), red(row, col));
@@ -103,7 +99,8 @@ static void scanRow(uint8_t row,
 
     setRowAddr(row);
     latchData();
-    enableDisplay(true);
+    enableGreen(true);
+    enableRed(true);
 }
 
 /**
@@ -206,9 +203,9 @@ void setup() {
     // Latch – Daten bleiben jetzt dauerhaft im Ausgangsregister
     latchData();
 
-    // Enable einschalten – ab hier hält der Latch alles, kein loop nötig
-    digitalWrite(PIN_EN1, HIGH);
-    digitalWrite(PIN_EN2, HIGH);
+    // EN1 = Grün an, EN2 = Rot an
+    enableGreen(true);
+    enableRed(true);
 
     Serial.println(F("Zeile gesetzt – Latch haelt den Zustand."));
 }
