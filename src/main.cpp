@@ -184,11 +184,7 @@ static void nextWalkCol() {
 
 void setup() {
     Serial.begin(115200);
-    Serial.println(F("=== Zugzielanzeige Einzelkabel-Test ==="));
-    Serial.print(F("Spalten: ")); Serial.println(NUM_COLS);
-    Serial.print(F("Zeilen:  ")); Serial.println(NUM_ROWS);
 
-    // Alle Pins als Ausgang konfigurieren und sicher auf LOW setzen
     const uint8_t pins[] = { PIN_G, PIN_R, PIN_CLK, PIN_LAT,
                               PIN_A0, PIN_A1, PIN_A2, PIN_CS,
                               PIN_EN1, PIN_EN2 };
@@ -196,6 +192,7 @@ void setup() {
         pinMode(p, OUTPUT);
         digitalWrite(p, LOW);
     }
+    // EN1/EN2 dauerhaft LOW – nicht mehr anfassen
 }
 
 // ─── Debug: einzelne Zeile dauerhaft anzeigen ────────────────────────────────
@@ -204,17 +201,14 @@ void setup() {
 #define TEST_ZEILE 0
 
 void loop() {
-    // Eine einzelne Zeile konstant anzeigen – zum Debuggen der Zeilenadressierung.
-    // TEST_ZEILE ändern und neu flashen um jede Zeile einzeln zu prüfen.
-    enableDisplay(false);
-
+    // EN1/EN2 werden nicht getoggelt – dauerhaft LOW aus setup().
+    // Nur Daten einschieben, Adresse setzen, latchen.
     for (uint16_t col = 0; col < NUM_COLS; col++) {
         clockBit(true, true); // Orange: beide Farbkanäle an
     }
 
     setRowAddr(TEST_ZEILE);
     latchData();
-    enableDisplay(true);
 
-    delay(500); // 500 ms leuchten lassen
+    delay(500);
 }
