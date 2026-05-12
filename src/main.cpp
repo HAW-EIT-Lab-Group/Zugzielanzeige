@@ -65,9 +65,8 @@ static void latchData() {
  * Hinweis: Falls das Display aktiv-low ist, HIGH/LOW hier vertauschen.
  */
 static void enableDisplay(bool on) {
-    // Enable-Pins sind aktiv-low: LOW = an, HIGH = aus
-    digitalWrite(PIN_EN1, on ? LOW : HIGH);
-    digitalWrite(PIN_EN2, on ? LOW : HIGH);
+    digitalWrite(PIN_EN1, on ? HIGH : LOW);
+    digitalWrite(PIN_EN2, on ? HIGH : LOW);
 }
 
 /**
@@ -201,14 +200,15 @@ void setup() {
 #define TEST_ZEILE 0
 
 void loop() {
-    // EN1/EN2 werden nicht getoggelt – dauerhaft LOW aus setup().
-    // Nur Daten einschieben, Adresse setzen, latchen.
+    enableDisplay(false);
+
     for (uint16_t col = 0; col < NUM_COLS; col++) {
         clockBit(true, true); // Orange: beide Farbkanäle an
     }
 
     setRowAddr(TEST_ZEILE);
     latchData();
+    enableDisplay(true);
 
     delay(500);
 }
