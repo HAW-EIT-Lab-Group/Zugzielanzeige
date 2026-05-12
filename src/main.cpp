@@ -179,21 +179,6 @@ static void nextWalkCol() {
     }
 }
 
-// ─── Arduino-Einstiegspunkte ──────────────────────────────────────────────────
-
-void setup() {
-    Serial.begin(115200);
-
-    const uint8_t pins[] = { PIN_G, PIN_R, PIN_CLK, PIN_LAT,
-                              PIN_A0, PIN_A1, PIN_A2, PIN_CS,
-                              PIN_EN1, PIN_EN2 };
-    for (uint8_t p : pins) {
-        pinMode(p, OUTPUT);
-        digitalWrite(p, LOW);
-    }
-    // EN1/EN2 dauerhaft LOW – nicht mehr anfassen
-}
-
 // ─── Einzel-Zeilen-Test ───────────────────────────────────────────────────────
 // Zeile 0 einmal einschalten – Latch hält den Zustand dauerhaft.
 // TEST_ZEILE ändern und neu flashen um andere Zeilen zu testen.
