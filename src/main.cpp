@@ -214,4 +214,6 @@ void loop() {
     setRowAddr(TEST_ZEILE);
     latchData();
     enableDisplay(true);
+
+    delay(500); // 500 ms leuchten lassen
 }
