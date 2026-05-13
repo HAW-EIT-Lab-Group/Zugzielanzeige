@@ -16,8 +16,10 @@ Je 200x16 Pixel pro Flachbandkabel -> insgesammt 4 Flachbandkabel pro seite
 ---
 ## Aufbereitung ZZA
 ### 12.05.2026
-- Entfernen unnötiger Kabel
-- Auftrennen der Brücke zwischen N und GND
+- Entfernen unnötiger Kabel (2x RS485; 1x Steckdose mit Zuleitung)
+- Auftrennen der Brücke zwischen N und Erde
+- Entfernung von Schmelzsicherung (4A) und Kontaktklemmen auf linker Hutschiene
+- Erdungseingang mit einer 2er Brücke um eine Kontaktklemme erweitert
 
 ---
 ## Reverse Engineering von LED Matrix Ansteuerung
