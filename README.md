@@ -112,3 +112,9 @@ Je 200x16 Pixel pro Flachbandkabel -> insgesammt 4 Flachbandkabel pro seite
 
 > Multiplexing-Zwang: Da die Zeilen über die 238er Decoder (Adress-Pins 9, 11, 13) gewählt werden, leuchtet eine Zeile nur so lange, wie sie aktiv adressiert wird. In einer Matrix-Ansteuerung muss man permanent im Kreis alle Zeilen (0-15) immer wieder extrem schnell hintereinander ansteuern (ca. 60-100 mal pro Sekunde).
 ​> Die Lösung: Die Software darf nicht "warten". Sie muss in einer schnellen Endlosschleife Daten schieben -> Latch drücken -> Zeile wechseln -> Wiederholen.
+
+> Das deckt sich mit der Vermutung meines Kumpels. Habe vorhin mit Ihm telefoniert. 
+> digitalWrite hat einen enormen Overhead. Bei später 12.800 LEDs (64x200) und 16 Zeilen Multiplexing-Zwang summiert sich diese Verzögerung so stark auf, dass die Refresh-Rate in den Keller geht und die Schutzschaltung der Solari-Platine (vermutlich über die 74HC02/244 Logik) wegen fehlender Takt-Dynamik dichtmacht.
+> ​digitalWriteFast ist für den Arduino Mega schon ein riesiger Sprung (Faktor 10-20), da es die Pin-Prüfung zur Kompilierzeit erledigt. 80Hz Refresh-Rate wären super.
+> ​Deshalb hat mir mein Kumpel zum ESP32 geraten. Der taktet nicht nur mit 240MHz (statt der 16MHz vom Mega), sondern kann über DMA (Direct Memory Access) die Daten fast ohne CPU-Last an die Schieberegister rauspumpen
+> ​Haltet mich auf dem Laufenden, ob die 1-2MHz mit digitalWriteFast ausreichen, um das Bild stabil zu halten oder ob das Timing zwischen Clock & Latch angepasst werden muss. Viel Erfolg ✌️🍀
