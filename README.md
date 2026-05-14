@@ -1,29 +1,23 @@
 # Dokumentation Zugzielanzeige (ZZA)
 
 ---
-## Aufbau
-200x64 Pixel, jeweils die Farben Rot und Grün seperat ansteuerbar.
-
-Je 200x16 Pixel pro Flachbandkabel -> insgesammt 4 Flachbandkabel pro seite
-
----
 ## Todo
 - Korrekte Pin Belegung der Flachbandkabel bestimmen
 - code mit höherer Aktualisierungsrate schreiben (leds mit 60-100Hz ansteuern -> digitalWriteFast(), keine/nur kurze delays)
 - Gehäuse schön machen
-  
----
-## Aufbereitung ZZA
-### 12.05.2026
-- Entfernen unnötiger Kabel (2x RS485; 1x Steckdose mit Zuleitung)
-- Auftrennen der Brücke zwischen N und Erde
-- Entfernung von Schmelzsicherung (4A) und Kontaktklemmen auf linker Hutschiene
-- Erdungseingang mit einer 2er Brücke um eine Kontaktklemme erweitert
 
 ---
-## Reverse Engineering von LED Matrix Ansteuerung
+## Aufbau ZZA
+200x64 Pixel, jeweils die Farben Rot und Grün seperat ansteuerbar.
 
-### Verifizierte Pin belegungen:
+Je 200x16 Pixel pro Flachbandkabel -> insgesammt 4 Flachbandkabel pro seite. (Pin belegung s. Kap. LED Matrix Ansteuerung)
+
+Insgesamt 7 Netzteile, 3,5 für jede Seite
+
+---
+### LED Matrix Ansteuerung
+
+#### Verifizierte Pin belegungen:
 - Pin 11: A1 (Bit 1 der 3-Bit Zeilenauswahl)
 - Pin 13: A2 (Bit 2 der 3-Bit Zeilenauswahl)
 - Pin 15: CS (Hardwareseitiges Umstellen zwischen oberen und unteren 8 bit)
@@ -33,11 +27,19 @@ Je 200x16 Pixel pro Flachbandkabel -> insgesammt 4 Flachbandkabel pro seite
 
 - Pin 02, 04, 06, 08, 10, 12, 14, 16, 20: Masse (GND)
 
-### Probleme / Fixes
+#### Probleme / Fixes
 |Problem      |Potentieller Fix|
 |-------------|----------------|
 | LEDs bleiben nicht an, blinken nur kurz | schneller ansteuern, zeile leuchtet nur wenn angesteuert |
 | Pin belegung stimmt nicht | kabel nachverfolgen, test codes |
+  
+---
+## Aufbereitung ZZA
+### 12.05.2026
+- Entfernen unnötiger Kabel (2x RS485; 1x Steckdose mit Zuleitung)
+- Auftrennen der Brücke zwischen N und Erde
+- Entfernung von Schmelzsicherung (4A) und Kontaktklemmen auf linker Hutschiene
+- Erdungseingang mit einer 2er Brücke um eine Kontaktklemme erweitert
 
 ---
 ## Infos vom Typ mit dem anderen ZZA (Andy)
