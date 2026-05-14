@@ -29,7 +29,7 @@ Je 200x16 Pixel pro Flachbandkabel -> insgesammt 4 Flachbandkabel pro seite
 - Pin 15: CS (Hardwareseitiges Umstellen zwischen oberen und unteren 8 bit)
 
 - Pin 17: EN1 (Output Enable für rote LEDS, active LOW)
-- Pin 18: EN2 (Output Enable für rote LEDS, active LOW)
+- Pin 18: EN2 (Output Enable für grüne LEDS, active LOW)
 
 - Pin 02, 04, 06, 08, 10, 12, 14, 16, 20: Masse (GND)
 
