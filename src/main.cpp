@@ -1,215 +1,120 @@
 /**
- * Einzelkabel-Test für die 64×200 Bi-Color LED-Matrix (Zugzielanzeige)
+ * Zugzielanzeige – Einzelkabel-Test mit digitalWriteFast
  *
- * Testet ein einzelnes Flachbandkabel (16 Zeilen × 200 Spalten).
- * Die Muster wechseln alle paar Sekunden automatisch; über Serial kann
- * der aktuelle Zustand mitgelesen werden (115200 Baud).
+ * Kernproblem das vorher nicht funktioniert hat:
+ * Der 74HC238-Decoder hält eine Zeile NUR aktiv solange sie adressiert ist.
+ * Die Software muss deshalb alle 16 Zeilen permanent im Kreis durchlaufen
+ * (Multiplexing). Ein einmaliges setup() reicht nicht.
  *
- * Testmuster-Reihenfolge:
- *   1. Alle LEDs Grün       – Datenpfad grün OK?
- *   2. Alle LEDs Rot        – Datenpfad rot OK?
- *   3. Alle LEDs Orange     – beide Kanäle gleichzeitig OK?
- *   4. Schachbrett G/R      – Spaltenauflösung OK?
- *   5. Zeilenläufer         – alle 16 Zeilen einzeln, Zeilenadressierung OK?
- *   6. Spaltenläufer        – einzelne Spalte wandert, Takt/Latch OK?
+ * Ziel: ~80 Hz Bildwiederholrate (16 Zeilen × 5ms pro Zeile = 80Hz)
+ * Mit digitalWriteFast statt digitalWrite: Faktor 10-20 schneller,
+ * da die Pin-Prüfung zur Compile-Zeit erledigt wird.
+ *
+ * Bibliothek installieren (Arduino IDE):
+ *   Sketch → Bibliothek einbinden → Bibliotheken verwalten → "digitalWriteFast"
  */
 
 #include <Arduino.h>
+#include <digitalWriteFast.h>
 
 // ─── Pin-Definitionen ─────────────────────────────────────────────────────────
 
 #define PIN_G   22   // Data Green
 #define PIN_R   24   // Data Red
-#define PIN_CLK 26   // Clock (Schieberegister-Takt)
-#define PIN_LAT 28   // Latch (Datenübernahme/Strobe)
-// Arduino Mega definiert PIN_A0–A7 bereits für Analogpins – überschreiben
+#define PIN_CLK 26   // Clock
+#define PIN_LAT 28   // Latch
+
+// Arduino Mega belegt PIN_A0-A2 intern – überschreiben
 #undef PIN_A0
 #undef PIN_A1
 #undef PIN_A2
 #define PIN_A0  30   // Zeilenadresse Bit 0
 #define PIN_A1  32   // Zeilenadresse Bit 1
 #define PIN_A2  34   // Zeilenadresse Bit 2
-#define PIN_CS  36   // Chip-Select: LOW = Zeilen 0–7, HIGH = Zeilen 8–15
-#define PIN_EN1 38   // Enable / Helligkeit 1
-#define PIN_EN2 39   // Enable / Helligkeit 2
+#define PIN_CS  36   // Chip-Select: LOW = Zeilen 0-7, HIGH = Zeilen 8-15
+#define PIN_EN1 38   // Enable Rot
+#define PIN_EN2 39   // Enable Grün
 
-// ─── Display-Konstanten ───────────────────────────────────────────────────────
+// ─── Konstanten ───────────────────────────────────────────────────────────────
 
-static constexpr uint16_t NUM_COLS    = 200; // Spalten pro Zeile
-static constexpr uint8_t  NUM_ROWS    = 16;  // Zeilen pro Flachbandkabel
-static constexpr uint16_t PATTERN_MS  = 4000; // Anzeigedauer pro Muster (ms)
+#define NUM_COLS 200
+#define NUM_ROWS  16
 
-// ─── Niederpegel-Hilfsfunktionen ──────────────────────────────────────────────
-
-/**
- * Zeilenadresse setzen.
- * row 0–7:  CS=LOW,  A0/A1/A2 = row
- * row 8–15: CS=HIGH, A0/A1/A2 = row - 8
- */
-static void setRowAddr(uint8_t row) {
-    uint8_t addr = row & 0x07; // untere 3 Bits
-    digitalWrite(PIN_A0, (addr & 0x01) ? HIGH : LOW);
-    digitalWrite(PIN_A1, (addr & 0x02) ? HIGH : LOW);
-    digitalWrite(PIN_A2, (addr & 0x04) ? HIGH : LOW);
-    digitalWrite(PIN_CS,  row >= 8     ? HIGH : LOW);
-}
-
-/** Latch-Impuls: Schieberegister-Inhalt in Ausgangslatch übernehmen. */
-static void latchData() {
-    digitalWrite(PIN_LAT, HIGH);
-    digitalWrite(PIN_LAT, LOW);
-}
-
-// EN1 = Rot aktivieren, EN2 = Grün aktivieren
-static void enableRed  (bool on) { digitalWrite(PIN_EN1, on ? HIGH : LOW); }
-static void enableGreen(bool on) { digitalWrite(PIN_EN2, on ? HIGH : LOW); }
+// ─── Eine Zeile scannen ───────────────────────────────────────────────────────
 
 /**
- * Einen CLK-Impuls erzeugen und dabei die Datenpins setzen.
- * Wird für jede Spalte einmal aufgerufen.
+ * Ablauf pro Zeile:
+ * 1. Enable aus  → verhindert Geisterbilder während Adresswechsel
+ * 2. 200 Bits einschieben
+ * 3. Zeilenadresse + CS setzen
+ * 4. Latch
+ * 5. Enable ein → Zeile leuchtet bis zum nächsten Durchlauf
  */
-static inline void clockBit(bool green, bool red) {
-    digitalWrite(PIN_G,   green ? HIGH : LOW);
-    digitalWrite(PIN_R,   red   ? HIGH : LOW);
-    digitalWrite(PIN_CLK, HIGH);
-    digitalWrite(PIN_CLK, LOW);
-}
+static void scanRow(uint8_t row, bool green, bool red) {
+    // 1. Enable aus
+    digitalWriteFast(PIN_EN1, LOW);
+    digitalWriteFast(PIN_EN2, LOW);
 
-// ─── Scan-Funktion ────────────────────────────────────────────────────────────
-
-/**
- * Eine Zeile vollständig ausgeben.
- *
- * @param row    Zeilennummer 0–15
- * @param green  Callback: liefert true wenn Spalte col grün sein soll
- * @param red    Callback: liefert true wenn Spalte col rot sein soll
- *
- * Ablauf: Enable aus → 200 Bits einschieben → Adresse setzen → Latch → Enable an
- */
-static void scanRow(uint8_t row,
-                    bool (*green)(uint8_t row, uint16_t col),
-                    bool (*red  )(uint8_t row, uint16_t col))
-{
-    enableGreen(false);
-    enableRed(false);
-
-    for (uint16_t col = 0; col < NUM_COLS; ++col) {
-        clockBit(green(row, col), red(row, col));
+    // 2. 200 Bits einschieben
+    for (uint16_t col = 0; col < NUM_COLS; col++) {
+        if (green) { digitalWriteFast(PIN_G, HIGH); } else { digitalWriteFast(PIN_G, LOW); }
+        if (red)   { digitalWriteFast(PIN_R, HIGH); } else { digitalWriteFast(PIN_R, LOW); }
+        digitalWriteFast(PIN_CLK, HIGH);
+        digitalWriteFast(PIN_CLK, LOW);
     }
 
-    setRowAddr(row);
-    latchData();
-    enableGreen(true);
-    enableRed(true);
+    // 3. Zeilenadresse setzen (A0/A1/A2 = Bits 0-2, CS für obere Hälfte)
+    // if/else nötig: digitalWriteFast braucht HIGH/LOW als Compile-Zeit-Konstante
+    if (row & 0x01) { digitalWriteFast(PIN_A0, HIGH); } else { digitalWriteFast(PIN_A0, LOW); }
+    if (row & 0x02) { digitalWriteFast(PIN_A1, HIGH); } else { digitalWriteFast(PIN_A1, LOW); }
+    if (row & 0x04) { digitalWriteFast(PIN_A2, HIGH); } else { digitalWriteFast(PIN_A2, LOW); }
+    if (row >= 8)   { digitalWriteFast(PIN_CS, HIGH); } else { digitalWriteFast(PIN_CS, LOW); }
+
+    // 4. Latch – Daten in Ausgangslatch übernehmen
+    digitalWriteFast(PIN_LAT, HIGH);
+    digitalWriteFast(PIN_LAT, LOW);
+
+    // 5. Enable ein (EN1=Rot, EN2=Grün)
+    if (red)   { digitalWriteFast(PIN_EN1, HIGH); } else { digitalWriteFast(PIN_EN1, LOW); }
+    if (green) { digitalWriteFast(PIN_EN2, HIGH); } else { digitalWriteFast(PIN_EN2, LOW); }
 }
 
-/**
- * Alle 16 Zeilen einmal durchscannen (ein komplettes Frame).
- * Wartet zwischen den Zeilen rowDwellUs Mikrosekunden.
- */
-static void refreshFrame(bool (*green)(uint8_t, uint16_t),
-                          bool (*red  )(uint8_t, uint16_t),
-                          uint16_t rowDwellUs = 300)
-{
-    for (uint8_t row = 0; row < NUM_ROWS; ++row) {
-        scanRow(row, green, red);
-        if (rowDwellUs) delayMicroseconds(rowDwellUs);
-    }
-}
-
-// ─── Testmuster-Datenfunktionen ───────────────────────────────────────────────
-
-// Alle Pixel grün
-static bool allGreen (uint8_t, uint16_t) { return true;  }
-static bool allRed   (uint8_t, uint16_t) { return true;  }
-static bool noPixel  (uint8_t, uint16_t) { return false; }
-
-// Schachbrett: gerade Spalten grün in geraden Zeilen, ungerade Spalten grün in ungeraden
-static bool chessGreen(uint8_t row, uint16_t col) { return ((col + row) & 1) == 0; }
-static bool chessRed  (uint8_t row, uint16_t col) { return ((col + row) & 1) == 1; }
-
-// Zeilenläufer: nur die aktuelle Laufzeile leuchtet
-static uint8_t  walkRow = 0;
-static bool rowWalkGreen(uint8_t row, uint16_t)     { return row == walkRow; }
-static bool rowWalkRed  (uint8_t row, uint16_t col) { return row == walkRow && (col & 1); }
-
-// Spaltenläufer: eine einzelne Spalte wandert durch alle 200 Positionen
-static uint16_t walkCol = 0;
-static bool colWalkGreen(uint8_t, uint16_t col) { return col == walkCol; }
-static bool colWalkRed  (uint8_t, uint16_t col) { return col == walkCol; }
-
-// ─── Testmuster-Schleife ──────────────────────────────────────────────────────
-
-/**
- * Wiederholt refreshFrame für PATTERN_MS Millisekunden.
- * Zwischen jedem Frame kann optionale Logik (update) ausgeführt werden.
- */
-static void runPattern(const char* name,
-                       bool (*green)(uint8_t, uint16_t),
-                       bool (*red  )(uint8_t, uint16_t),
-                       void (*update)() = nullptr)
-{
-    Serial.print(F("Muster: "));
-    Serial.println(name);
-
-    uint32_t end = millis() + PATTERN_MS;
-    while (millis() < end) {
-        refreshFrame(green, red);
-        if (update) update();
-    }
-}
-
-// Update-Callbacks für die laufenden Muster
-static void nextWalkRow() {
-    static uint32_t lastStep = 0;
-    if (millis() - lastStep > 200) { // alle 200 ms eine Zeile weiter
-        walkRow = (walkRow + 1) % NUM_ROWS;
-        lastStep = millis();
-    }
-}
-
-static void nextWalkCol() {
-    static uint32_t lastStep = 0;
-    if (millis() - lastStep > 15) { // alle 15 ms eine Spalte weiter
-        walkCol = (walkCol + 1) % NUM_COLS;
-        lastStep = millis();
-    }
-}
-
-// ─── Einzel-Zeilen-Test ───────────────────────────────────────────────────────
-// Zeile 0 einmal einschalten – Latch hält den Zustand dauerhaft.
-// TEST_ZEILE ändern und neu flashen um andere Zeilen zu testen.
-#define TEST_ZEILE 0
+// ─── Arduino-Einstiegspunkte ──────────────────────────────────────────────────
 
 void setup() {
     Serial.begin(115200);
 
-    const uint8_t pins[] = { PIN_G, PIN_R, PIN_CLK, PIN_LAT,
-                              PIN_A0, PIN_A1, PIN_A2, PIN_CS,
-                              PIN_EN1, PIN_EN2 };
-    for (uint8_t p : pins) {
-        pinMode(p, OUTPUT);
-        digitalWrite(p, LOW);
-    }
+    pinModeFast(PIN_G,   OUTPUT);
+    pinModeFast(PIN_R,   OUTPUT);
+    pinModeFast(PIN_CLK, OUTPUT);
+    pinModeFast(PIN_LAT, OUTPUT);
+    pinModeFast(PIN_A0,  OUTPUT);
+    pinModeFast(PIN_A1,  OUTPUT);
+    pinModeFast(PIN_A2,  OUTPUT);
+    pinModeFast(PIN_CS,  OUTPUT);
+    pinModeFast(PIN_EN1, OUTPUT);
+    pinModeFast(PIN_EN2, OUTPUT);
 
-    // 200 Bits einschieben – alle Spalten orange (grün + rot)
-    for (uint16_t col = 0; col < NUM_COLS; col++) {
-        clockBit(true, true);
-    }
+    // Alle Pins sicher auf LOW
+    digitalWriteFast(PIN_G,   LOW);
+    digitalWriteFast(PIN_R,   LOW);
+    digitalWriteFast(PIN_CLK, LOW);
+    digitalWriteFast(PIN_LAT, LOW);
+    digitalWriteFast(PIN_A0,  LOW);
+    digitalWriteFast(PIN_A1,  LOW);
+    digitalWriteFast(PIN_A2,  LOW);
+    digitalWriteFast(PIN_CS,  LOW);
+    digitalWriteFast(PIN_EN1, LOW);
+    digitalWriteFast(PIN_EN2, LOW);
 
-    // Zeilenadresse setzen
-    setRowAddr(TEST_ZEILE);
-
-    // Latch – Daten bleiben jetzt dauerhaft im Ausgangsregister
-    latchData();
-
-    // EN1 = Grün an, EN2 = Rot an
-    enableGreen(true);
-    enableRed(true);
-
-    Serial.println(F("Zeile gesetzt – Latch haelt den Zustand."));
+    Serial.println(F("Multiplexing gestartet – alle Zeilen Orange"));
 }
 
 void loop() {
-    // leer – Latch haelt den Zustand ohne weiteren Code
+    // Alle 16 Zeilen so schnell wie möglich durchlaufen.
+    // Der 74HC238-Decoder hält eine Zeile nur aktiv solange sie adressiert ist
+    // → kein delay, kein warten, permanente Endlosschleife.
+    for (uint8_t row = 0; row < NUM_ROWS; row++) {
+        scanRow(row, true, true); // true/true = Orange (Grün + Rot)
+    }
 }
