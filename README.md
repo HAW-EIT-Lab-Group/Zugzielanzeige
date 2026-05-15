@@ -36,10 +36,11 @@ Insgesamt 7 Netzteile, 3,5 für jede Seite
 ---
 ## Aufbereitung ZZA
 ### 12.05.2026
-- Entfernen unnötiger Kabel (2x RS485; 1x Steckdose mit Zuleitung)
+- Entfernen unnötiger Kabel (2x RS485; 1x Steckdose mit Zuleitung; ursprüngliche Datenleitung)
 - Auftrennen der Brücke zwischen N und Erde
 - Entfernung von Schmelzsicherung (4A) und Kontaktklemmen auf linker Hutschiene
 - Erdungseingang mit einer 2er Brücke um eine Kontaktklemme erweitert
+
 
 ---
 ## Infos vom Typ mit dem anderen ZZA (Andy)
@@ -49,7 +50,7 @@ Insgesamt 7 Netzteile, 3,5 für jede Seite
 
 > Falls Ihr die Tafel in einer Wohnung anschließen wollt, müsst Ihr vorher diese Brücke zwischen Null und Erde entfernen, sonst gibt es eine böse Überraschung 😉 Die Hochbahn nutzt eine "Nullung" ohne FI
 > 
-> <img width="200" alt="text" src="./bilder/AndysTips_Stromversorgung.jpeg" />
+> <img width="200" alt="text" src="./bilder/AndysTipps/Stromversorgung.jpeg" />
 
 > Es sind 7 Netzteile verbaut mit 50 Ampere zu 5 Volt, wobei 3 + 1/2 sich je eine Tafelseite teilen. 
 > Die gelb verdrillten Adern sind als "Current Share" mit den anderen NT verbunden um die Last aufzuteilen
@@ -70,16 +71,16 @@ Insgesamt 7 Netzteile, 3,5 für jede Seite
 > Ich habe die Platine Reverse zu dem Wannenstecker zurückgemessen.
 > Anhand der Datenblätter der vorhandenen Bauteile könnte das hier die Belegung sein ( zu etwa 70% ) Leider bisher kein Lebenszeichen der LED's. Ich Experimentiere allerdings mit einem ESP32 Dev 4, der sendet nur 3,3V. TTL aus den 90s ist aber 5V, entsprechend Löte ich gerade ein paar 74 HCT 245 ( Level Shifter ) auf eine Lochrasterplatine inkl. Glättungs Kondensatoren. Denn auf der Sandwichplatine ist ein Wiederstandsnetzwerk und 330 Ohm SMD Wiederstände. Möglicherweise wird das Signal dort so weit abgeschwächt das nichts mehr passiert
 >
-> <img width="200" alt="text" src="./bilder/AndysTips_PinLayout_V1.jpeg" />
+> <img width="200" alt="text" src="./bilder/AndysTipps/PinLayout_V1.jpeg" />
 
 > Wichtig ⚠️ Auf den LED Platinen sind 3 Schienen. 
 > GND ( Rechts ) / +5V  ( Mitte ) für die LED Matrix Versorgung  ( gehen an alle FTZ 751 ) -> VBB beschriftet /  +5 Volt ( Links ) VCC > kommt von einem einzigen Netzteil und versorgt beide Tafelseiten mit Spannung für die Logik + die Lüfter der Klimaanlage. Wenn die Lüfter laufen,  bekommen die Boards auch die Logikspannung. Merkt man sofort, weil die Tafel dann sehr laut wird
 
 > Für meine Tests habe ich +5V über ein 1K Ohm Wiederstand direkt auf Pin 17 o. 18 gegeben, welcher eventuell später   Multiplex die Lichtstärke steuert. Hat aber leider nichts gebracht. Wenn mit meinen Level Shift nichts geht, würde ich mir noch mal Clock und Strobebanschauen.
 >
-> <img width="200" alt="text" src="./bilder/AndysTips_PlatinenVerbindungen1.jpeg" />
+> <img width="200" alt="text" src="./bilder/AndysTipps/PlatinenVerbindungen1.jpeg" />
 >
-> <img width="200" alt="text" src="./bilder/AndysTips_PlatinenVerbindungen2.jpeg" />
+> <img width="200" alt="text" src="./bilder/AndysTipps/PlatinenVerbindungen2.jpeg" />
 >
 > Bedeutung: Links der Eingangsstecker ( der Wichtige ) auf der kleinen Platine + Ausgangsstecker, welcher die Signale weiter zum nächsten LED Modul ( über Bufferausgang  74HC244 ) weiterreicht. Der Verdindungsstecker leitet die Dignale an die Hauptplatine zu den Schieberegistetn, Buffern und Multiplexer 238
 > P.S. Alles in Klammern z.B. (3) steht  für Beinchen 3 vom Bauteil. Mit den Datenblatt konnte ich so versuchen den Sinn dahinter zu verstehen.
