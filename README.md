@@ -18,19 +18,34 @@ Insgesamt 7 Netzteile, 3,5 für jede Seite
 ### LED Matrix Ansteuerung
 
 #### Pin belegungen:
-- Pin 01: Data_G
-- Pin 03: Data_R
-- Pin 05: CLK
-- Pin 07: STR
-- Pin 09: A0 (Bit 1 der 3-Bit Zeilenauswahl)
-- Pin 11: A1 (Bit 1 der 3-Bit Zeilenauswahl)
-- Pin 13: A2 (Bit 2 der 3-Bit Zeilenauswahl)
-- Pin 15: CS (Hardwareseitiges Umstellen zwischen oberen und unteren 8 bit)
+## Stecker (2x10 pins)
 
-- Pin 17: EN1 (Output Enable für rote LEDS, active LOW)
-- Pin 18: EN2 (Output Enable für grüne LEDS, active LOW)
+Oben: links Pin 1, rechts Pin 2 — Reihen fortlaufend nach unten
 
-- Pin 02, 04, 06, 08, 10, 12, 14, 16, 20: Masse (GND)
+|Pin|Belegung|Pin|Belegung|
+|---:|---|---:|---|
+|01|Data_G|02|GND|
+|03|Data_R|04|GND|
+|05|CLK|06|GND|
+|07|STR|08|GND|
+|09|A0|10|GND|
+|11|A1|12|GND|
+|13|A2|14|GND|
+|15|Chip Select|16|GND|
+|17|Enable Red|18|Enable Green|
+|19|NC|20|GND|
+
+- Data_G:   Datenleitung für grüne LEDs
+- Data_R:   Datenleitung für rote LEDs
+- CLK:      Clock Leitung, global für alle Sections
+- STR:      Strobe/Latch, global für alle Sections
+- A0:       Bit1 der 3-Bit Zeilenauswahl
+- A1:       Bit 1 der 3-Bit Zeilenauswahl
+- A2:       Bit 2 der 3-Bit Zeilenauswahl
+- CS:       Hardwareseitiges Umstellen zwischen oberen und unteren 8 bit
+
+- EN_R:     Output Enable für rote LEDS, active LOW
+- EN_G:     Output Enable für grüne LEDS, active LOW
 
 - Pin 19: Wahrscheinlich unused, auf jeden Fall nicht GND
 
