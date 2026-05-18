@@ -17,7 +17,12 @@ Insgesamt 7 Netzteile, 3,5 für jede Seite
 ---
 ### LED Matrix Ansteuerung
 
-#### Verifizierte Pin belegungen:
+#### Pin belegungen:
+- Pin 01: Data_G
+- Pin 03: Data_R
+- Pin 05: CLK
+- Pin 07: STR
+- Pin 09: A0 (Bit 1 der 3-Bit Zeilenauswahl)
 - Pin 11: A1 (Bit 1 der 3-Bit Zeilenauswahl)
 - Pin 13: A2 (Bit 2 der 3-Bit Zeilenauswahl)
 - Pin 15: CS (Hardwareseitiges Umstellen zwischen oberen und unteren 8 bit)
@@ -26,6 +31,8 @@ Insgesamt 7 Netzteile, 3,5 für jede Seite
 - Pin 18: EN2 (Output Enable für grüne LEDS, active LOW)
 
 - Pin 02, 04, 06, 08, 10, 12, 14, 16, 20: Masse (GND)
+
+- Pin 19: Wahrscheinlich unused, auf jeden Fall nicht GND
 
 #### Probleme / Fixes
 |Problem      |Potentieller Fix|
@@ -40,6 +47,10 @@ Insgesamt 7 Netzteile, 3,5 für jede Seite
 - Auftrennen der Brücke zwischen N und Erde
 - Entfernung von Schmelzsicherung (4A) und Kontaktklemmen auf linker Hutschiene
 - Erdungseingang mit einer 2er Brücke um eine Kontaktklemme erweitert
+
+### 16.05.2026
+- erfolgreiches ansteuern der LEDs
+    - ganze reihe/einzelne LEDS ohne flackern
 
 
 ---

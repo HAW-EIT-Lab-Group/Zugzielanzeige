@@ -6,25 +6,21 @@
 // -------------------- HARDWARE --------------------
 //
 void pinSetup(){
-    /*
-    über boards array loopen, s. header.h
-    //board 0
-    pinMode(PIN_DATA_R_B0, OUTPUT);
-    pinMode(PIN_DATA_G_B0, OUTPUT);
-    pinMode(PIN_A0_B0, OUTPUT);
-    pinMode(PIN_A1_B0, OUTPUT);
-    pinMode(PIN_A2_B0, OUTPUT);
-    pinMode(PIN_CS_B0, OUTPUT);
-    //board 1
-    //board 2
-    //board 3
-    
-    //for all rows
-    pinMode(PIN_CLK, OUTPUT);
-    pinMode(PIN_STR, OUTPUT);
-    pinMode(PIN_EN_R, OUTPUT);
-    pinMode(PIN_EN_G, OUTPUT);
-    */
+    const int pins[] = {
+    PIN_DATA_G_S0, PIN_DATA_R_S0, PIN_A0_S0, PIN_A1_S0, PIN_A2_S0, PIN_CS_S0,
+    PIN_DATA_G_S1, PIN_DATA_R_S1, PIN_A0_S1, PIN_A1_S1, PIN_A2_S1, PIN_CS_S1,
+    PIN_DATA_G_S2, PIN_DATA_R_S2, PIN_A0_S2, PIN_A1_S2, PIN_A2_S2, PIN_CS_S2,
+    PIN_DATA_G_S3, PIN_DATA_R_S3, PIN_A0_S3, PIN_A1_S3, PIN_A2_S3, PIN_CS_S3,
+    PIN_CLK, PIN_STR, PIN_EN_R, PIN_EN_G
+    };
+
+    const int count = sizeof(pins) / sizeof(pins[0]);
+
+    for (int i = 0; i < count; ++i) {
+        int p = pins[i];
+        pinModeFast(p, OUTPUT);
+        digitalWriteFast(p, LOW);
+    }
 }
 
 //pulses clock pin
