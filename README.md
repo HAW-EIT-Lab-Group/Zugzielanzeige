@@ -56,17 +56,27 @@ Oben: links Pin 1, rechts Pin 2 — Reihen fortlaufend nach unten
 | Pin belegung stimmt nicht | kabel nachverfolgen, test codes |
   
 ---
-## Aufbereitung ZZA
-### 12.05.2026
+## Protokoll ZZA (Anwesenheit:[Finn,Jan,Jonas,Mikko,Erik])
+### 12.05.2026 
+(Treffen bei Finn) [X,X, ,X,X]
 - Entfernen unnötiger Kabel (2x RS485; 1x Steckdose mit Zuleitung; ursprüngliche Datenleitung)
 - Auftrennen der Brücke zwischen N und Erde
 - Entfernung von Schmelzsicherung (4A) und Kontaktklemmen auf linker Hutschiene
 - Erdungseingang mit einer 2er Brücke um eine Kontaktklemme erweitert
 
-### 16.05.2026
+### 16.05.2026 [X, , , , ]
 - erfolgreiches ansteuern der LEDs
     - ganze reihe/einzelne LEDS ohne flackern
 
+### 31.05.2026 (Online) [X,X,X,X,X]
+- Besprechung von Projektplanung
+
+### 07.06.2026 (Online) [X,X, , ,X]
+- Nachbereitung der Projektplanung mit Verbesserungsvorschlägen
+    - genauere Ziele (sollen quantitavtiv messbar sein)
+    - verantwortliche für Risiken
+    - Projektleiter/Kommunikation von Finn auf Erik übertragen
+    - Meilensteine/mehr parallelität im Zeitplan
 
 ---
 ## Infos vom Typ mit dem anderen ZZA (Andy)
