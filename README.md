@@ -52,8 +52,8 @@ Oben: links Pin 1, rechts Pin 2 — Reihen fortlaufend nach unten
 #### Probleme / Fixes
 |Problem      |Potentieller Fix|
 |-------------|----------------|
-| LEDs bleiben nicht an, blinken nur kurz | schneller ansteuern, zeile leuchtet nur wenn angesteuert |
-| Pin belegung stimmt nicht | kabel nachverfolgen, test codes |
+|  |  |
+
   
 ---
 ## Protokoll ZZA (Anwesenheit:[Finn,Jan,Jonas,Mikko,Erik])
