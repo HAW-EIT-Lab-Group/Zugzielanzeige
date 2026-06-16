@@ -69,4 +69,4 @@ void setRow(int row) {
   digitalWriteFast(PIN_A1, row & 0x02);
   digitalWriteFast(PIN_A2, row & 0x04);
   digitalWriteFast(PIN_CS, row >= 8);
-}
+    }
