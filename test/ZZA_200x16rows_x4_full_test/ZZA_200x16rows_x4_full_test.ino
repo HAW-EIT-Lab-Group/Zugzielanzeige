@@ -1,5 +1,7 @@
 #include <digitalWriteFast.h>
+#include <string.h>
 #include <stdint.h>
+#include "imageData.h"
 
 // Pin 01   D_G         red
 // Pin 03   D_R         green
@@ -47,12 +49,37 @@ PIN_4_G D29 (PA7)
 #define HEIGHT_ALL 64
 #define NR_OF_PXL_SECTION WIDTH*HEIGHT_SECTION
 
-uint8_t red_matrix[HEIGHT_ALL][WIDTH / 8];  // 64 rows * 25 bytes => 64 * (25 * 8 bits bzw. 8 cols) => 64 rows * 200 cols
-uint8_t green_matrix[HEIGHT_ALL][WIDTH / 8];
 uint8_t bitmap[WIDTH][HEIGHT_SECTION];
 
-void matrix2bitmap(uint8_t red_matrix[HEIGHT_ALL][WIDTH / 8], uint8_t green_matrix[HEIGHT_ALL][WIDTH / 8]){
-
+/* mode:
+0 = all 0
+1 = all red 1
+2 = all green 1
+3 = all 1 
+4 = file from imageData.h
+*/
+void setBitmap(uint8_t mode){
+    switch (mode){
+        case 0: // off
+            memset(bitmap,0,sizeof(bitmap));
+            break;
+        case 1: // red
+            memset(bitmap,0b10101010,sizeof(bitmap));
+            break;
+        case 2: // green
+            memset(bitmap,0b01010101,sizeof(bitmap));
+            break;
+        case 3: // yellow
+            memset(bitmap,0b11111111,sizeof(bitmap));
+            break;
+        case 4: // image
+            memcpy_P(bitmap,imageData,sizeof(bitmap));
+            break; 
+        default: // pixel 1 set to red, rest off
+            memset(bitmap,0,sizeof(bitmap));
+            memset(bitmap,0b10000000,1);
+            break;
+    }
 }
 
 
@@ -76,8 +103,7 @@ void setup() {
     analogWrite(PIN_EN_R, 0);  // active LOW  -> 100% Brightness = 0
     analogWrite(PIN_EN_G, 0);  //             -> 0% Brightness = 255
 
-    matrix2bitmap(red_matrix,green_matrix); // bitmap variable overwritten in funtion
-
+    setBitmap(4); // bitmap variable overwritten in funtion
 }
 
 // Main Loop
@@ -100,6 +126,4 @@ void loop() {
         digitalWriteFast(PIN_STR, true);
         digitalWriteFast(PIN_STR, false);
     }
-
-
 }
