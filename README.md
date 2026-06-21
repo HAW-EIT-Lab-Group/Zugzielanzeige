@@ -14,9 +14,34 @@
 
 ---
 ## Aufbau ZZA
-200x64 Pixel, jeweils die Farben Rot und Grün seperat ansteuerbar.
+200x64 Pixel, jeweils die Farben Rot und Grün seperat über Schieberegister mit 5V Logik ansteuerbar.
 
 Je 200x16 Pixel pro Flachbandkabel -> insgesammt 4 Flachbandkabel pro seite. (Pin belegung s. Kap. LED Matrix Ansteuerung)
+
+Genereller Ablauf zum schreiben auf die Matrix:
+```mermaid
+flowchart TD
+    A[Start Frame]
+    B[Pins zum wählen der Zeile setzen]
+    C[Datenpins setzen]
+    D[Clock pulsen]
+    E{Alle Bits geschrieben?}
+    F[Latch pulsen]
+    G{Alle Zeilen geschrieben?}
+    H[Zeilenindex erhöhen]
+
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    E -- Nein --> C
+    E -- Ja --> F
+    F --> G
+    G -- Nein --> H
+    G -- Ja --> A
+    H --> B
+
+```
 
 Insgesamt 7 Netzteile, 3,5 für jede Seite
 
