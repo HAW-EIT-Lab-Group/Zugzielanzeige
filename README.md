@@ -1,10 +1,16 @@
 # Dokumentation Zugzielanzeige (ZZA)
-
----
-## Todo
-- Korrekte Pin Belegung der Flachbandkabel bestimmen
-- code mit höherer Aktualisierungsrate schreiben (leds mit 60-100Hz ansteuern -> digitalWriteFast(), keine/nur kurze delays)
-- Gehäuse schön machen
+- [Dokumentation Zugzielanzeige (ZZA)](#dokumentation-zugzielanzeige-zza)
+  - [Aufbau ZZA](#aufbau-zza)
+    - [LED Matrix Ansteuerung](#led-matrix-ansteuerung)
+      - [Pin belegungen:](#pin-belegungen)
+  - [Protokoll ZZA](#protokoll-zza)
+    - [12.05.2026 (Treffen in Elmshorn)](#12052026-treffen-in-elmshorn)
+    - [16.05.2026](#16052026)
+    - [31.05.2026 (Online)](#31052026-online)
+    - [07.06.2026 (Online)](#07062026-online)
+    - [21.06.2026 (teil Online)](#21062026-teil-online)
+    - [22.06.2026](#22062026)
+  - [Infos vom Typ mit dem anderen ZZA (Andy)](#infos-vom-typ-mit-dem-anderen-zza-andy)
 
 ---
 ## Aufbau ZZA
@@ -18,7 +24,6 @@ Insgesamt 7 Netzteile, 3,5 für jede Seite
 ### LED Matrix Ansteuerung
 
 #### Pin belegungen:
-## Stecker (2x10 pins)
 
 Oben: links Pin 1, rechts Pin 2 — Reihen fortlaufend nach unten
 
@@ -49,34 +54,84 @@ Oben: links Pin 1, rechts Pin 2 — Reihen fortlaufend nach unten
 
 - Pin 19: Wahrscheinlich unused, auf jeden Fall nicht GND
 
-#### Probleme / Fixes
-|Problem      |Potentieller Fix|
-|-------------|----------------|
-|  |  |
-
   
 ---
-## Protokoll ZZA (Anwesenheit:[Finn,Jan,Jonas,Mikko,Erik])
-### 12.05.2026 
-(Treffen bei Finn) [X,X, ,X,X]
+## Protokoll ZZA
+### 12.05.2026 (Treffen in Elmshorn)
 - Entfernen unnötiger Kabel (2x RS485; 1x Steckdose mit Zuleitung; ursprüngliche Datenleitung)
 - Auftrennen der Brücke zwischen N und Erde
 - Entfernung von Schmelzsicherung (4A) und Kontaktklemmen auf linker Hutschiene
 - Erdungseingang mit einer 2er Brücke um eine Kontaktklemme erweitert
 
-### 16.05.2026 [X, , , , ]
+### 16.05.2026 
 - erfolgreiches ansteuern der LEDs
     - ganze reihe/einzelne LEDS ohne flackern
 
-### 31.05.2026 (Online) [X,X,X,X,X]
+### 31.05.2026 (Online)
 - Besprechung von Projektplanung
 
-### 07.06.2026 (Online) [X,X, , ,X]
+### 07.06.2026 (Online)
 - Nachbereitung der Projektplanung mit Verbesserungsvorschlägen
     - genauere Ziele (sollen quantitavtiv messbar sein)
     - verantwortliche für Risiken
     - Projektleiter/Kommunikation von Finn auf Erik übertragen
     - Meilensteine/mehr parallelität im Zeitplan
+
+### 21.06.2026 (teil Online)
+- schnelleren code getestet -> ganze LED Matrix lässt sich ohne flackern ansteuern
+- code für das Darstellen von 200x64 .png dateien funktioniert (bis auf den Fehler s. unten)
+- Probleme:
+    - beim ansteuern der verschiedenen Zeilen einer Section taucht ein Fehler auf:
+
+    |angesteuerte Zeile|angezeigte Zeile|cs|a2|a1|a0|
+    |---|---|---|---|---|---|
+    |0|1|0|0|0|0|
+    |1|2|0|0|0|1|
+    |2|3|0|0|1|0|
+    |...|...|||||
+    |14|15|1|1|1|0|
+    |15|0|1|1|1|1|
+
+    - wegen zu schnellem latchen?
+    - index fehler in code?
+
+### 22.06.2026
+Todo:
+- sollen wir anwesenheit dokumentieren?
+
+- auf Steuereinheit/-system Festlegen
+    - Arduino\
+    +: einfach zu programmieren\
+    +: code für einzelne Frames läuft schon\
+    -: evtl. nicht schnell genug um parallel zur matrix noch ein spiel laufen zu lassen -> im code testen wie viel Zeit für berechnung vom Spiel bleibt
+
+    - Raspberry Pi\
+    +: mehrere Kerne -> paralleles rechnen\
+    +: schnellere cpu als arduino -> berechnen von spiel dauert weniger lange
+    -: 3,3V logik -> level shifter benötigt
+
+    - FPGA\
+    +: parallelität einfach umzusetzen
+    +: schnell
+    -: schwieriger zu programmieren (je nach spiel sogar ungeeignet)
+
+    - Seperate Controller für berechnung und darstellung\
+    +: sinnvoll wenn pc/laptop zum spiel-berechnen genutzt wird, dieser aber keine gpio pins hat
+    -: ergibt wenig sinn wenn man sowieso ein schnelleres System zum spiele berechnen nutzt, welches auch direkt die matrix ansteuern könnte
+
+- Auf spiel festlegen
+    - Snake
+    - Pong
+    - Reaktionsspiel
+    - Tetris
+    - Pacman
+    - Frogger
+    - Tank Battle
+    - Vier gewinnt
+    - Schiffe versenken
+
+
+
 
 ---
 ## Infos vom Typ mit dem anderen ZZA (Andy)
