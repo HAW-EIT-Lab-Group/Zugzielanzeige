@@ -110,6 +110,9 @@ void setup() {
 void loop() {
     // Set whole Diplay like in the matrices defined
     for (int y = 0; y<HEIGHT_SECTION; y++) {
+        if(y == 15) y = 0;
+        else y +=1;
+        
         //Row selection
         digitalWriteFast(PIN_A0, (y & 0x01) != 0);
         digitalWriteFast(PIN_A1, (y & 0x02) != 0);
