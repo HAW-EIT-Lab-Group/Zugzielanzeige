@@ -75,6 +75,40 @@ void setBitmap(uint8_t mode){
         case 4: // image
             memcpy_P(bitmap,imageData,sizeof(bitmap));
             break; 
+        case 5: // moving red line
+        {
+            memset(bitmap, 0, sizeof(bitmap));
+
+            uint8_t bitmapY;
+            uint8_t bitMask;
+
+            if (movingLine < 16) {
+                bitmapY = movingLine;
+                bitMask = 0b10000000;     // rot y
+            }
+            else if (movingLine < 32) {
+                bitmapY = movingLine - 16;
+                bitMask = 0b00100000;     // rot y+16
+            }
+            else if (movingLine < 48) {
+                bitmapY = movingLine - 32;
+                bitMask = 0b00001000;     // rot y+32
+            }
+            else {
+                bitmapY = movingLine - 48;
+                bitMask = 0b00000010;     // rot y+48
+            }
+
+            for (int x = 0; x < WIDTH; x++) {
+                bitmap[x][bitmapY] = bitMask;
+            }
+
+            movingLine++;
+            if (movingLine >= HEIGHT_ALL)
+                movingLine = 0;
+
+            break;
+        }
         default: // pixel 1 set to red, rest off
             memset(bitmap,0,sizeof(bitmap));
             memset(bitmap,0b10000000,1);
@@ -103,11 +137,17 @@ void setup() {
     analogWrite(PIN_EN_R, 0);  // active LOW  -> 100% Brightness = 0
     analogWrite(PIN_EN_G, 0);  //             -> 0% Brightness = 255
 
-    setBitmap(4); // bitmap variable overwritten in funtion
+    setBitmap(0); // bitmap variable overwritten in funtion
 }
 
 // Main Loop
 void loop() {
+    static uint32_t lastUpdate = 0;
+
+    if (millis() - lastUpdate > 200) {   // alle 200 ms nächste Zeile
+        setBitmap(5); // for moving red line 
+        lastUpdate = millis();
+    }
     // Set whole Diplay like in the matrices defined
     for (int y = 0; y<HEIGHT_SECTION; y++) {
         //Row selection
