@@ -17,20 +17,20 @@
 // sonst.   GND
 /*
 // Section 1
-PIN_1_R D22 (PA0)
-PIN_1_G D23 (PA1)
+PIN_1_R D28 (PA0)
+PIN_1_G D29 (PA1)
 
 // Section 2
-PIN_2_R D24 (PA2)
-PIN_2_G D25 (PA3)
+PIN_2_R D26 (PA2)
+PIN_2_G D27 (PA3)
 
 // Section 3
-PIN_3_R D26 (PA4)
-PIN_3_G D27 (PA5)
+PIN_3_R D24 (PA4)
+PIN_3_G D25 (PA5)
 
 // Section 4
-PIN_4_R D28 (PA6)
-PIN_4_G D29 (PA7)
+PIN_4_R D22 (PA6)
+PIN_4_G D23 (PA7)
 */
 // Global for all Sections
 #define PIN_CLK 38
