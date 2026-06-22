@@ -94,7 +94,7 @@ Globale Signale:
 
 ---
 ## Protokoll ZZA
-### 12.05.2026 (Treffen in Elmshorn)
+### 12.05.2026 (Treffen in Klein Nordende)
 - Entfernen unnötiger Kabel (2x RS485; 1x Steckdose mit Zuleitung; ursprüngliche Datenleitung)
 - Auftrennen der Brücke zwischen N und Erde
 - Entfernung von Schmelzsicherung (4A) und Kontaktklemmen auf linker Hutschiene
