@@ -2,15 +2,17 @@
 - [Dokumentation Zugzielanzeige (ZZA)](#dokumentation-zugzielanzeige-zza)
   - [Aufbau ZZA](#aufbau-zza)
     - [LED Matrix Ansteuerung](#led-matrix-ansteuerung)
-      - [Pin belegungen:](#pin-belegungen)
+      - [Pin belegung Flachbandkabel:](#pin-belegung-flachbandkabel)
+      - [Anschluss an µ-Controller](#anschluss-an-µ-controller)
   - [Protokoll ZZA](#protokoll-zza)
-    - [12.05.2026 (Treffen in Klein Nordende)](#12052026-treffen-in-elmshorn)
+    - [12.05.2026 (Treffen in Klein Nordende)](#12052026-treffen-in-klein-nordende)
     - [16.05.2026](#16052026)
     - [31.05.2026 (Online)](#31052026-online)
     - [07.06.2026 (Online)](#07062026-online)
     - [21.06.2026 (teil Online)](#21062026-teil-online)
     - [22.06.2026](#22062026)
   - [Infos vom Typ mit dem anderen ZZA (Andy)](#infos-vom-typ-mit-dem-anderen-zza-andy)
+
 
 ---
 ## Aufbau ZZA
