@@ -4,7 +4,7 @@
     - [LED Matrix Ansteuerung](#led-matrix-ansteuerung)
       - [Pin belegungen:](#pin-belegungen)
   - [Protokoll ZZA](#protokoll-zza)
-    - [12.05.2026 (Treffen in Elmshorn)](#12052026-treffen-in-elmshorn)
+    - [12.05.2026 (Treffen in Klein Nordende)](#12052026-treffen-in-elmshorn)
     - [16.05.2026](#16052026)
     - [31.05.2026 (Online)](#31052026-online)
     - [07.06.2026 (Online)](#07062026-online)
