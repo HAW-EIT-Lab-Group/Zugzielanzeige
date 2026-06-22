@@ -48,9 +48,7 @@ Insgesamt 7 Netzteile, 3,5 für jede Seite
 ---
 ### LED Matrix Ansteuerung
 
-#### Pin belegungen:
-
-Oben: links Pin 1, rechts Pin 2 — Reihen fortlaufend nach unten
+#### Pin belegung Flachbandkabel:
 
 |Pin|Belegung|Pin|Belegung|
 |---:|---|---:|---|
@@ -79,7 +77,21 @@ Oben: links Pin 1, rechts Pin 2 — Reihen fortlaufend nach unten
 
 - Pin 19: Wahrscheinlich unused, auf jeden Fall nicht GND
 
-  
+#### Anschluss an µ-Controller
+
+Datenleitungen:
+
+| Section | Rot | Grün |
+|----------|-----|-------|
+| 1 | Data_R1 | Data_G1 |
+| 2 | Data_R2 | Data_G2 |
+| 3 | Data_R3 | Data_G3 |
+| 4 | Data_R4 | Data_G4 |
+
+Globale Signale:
+
+`A0`, `A1`, `A2`, `CS`, `STR`, `CLK`, `EN_R`, `EN_G`
+
 ---
 ## Protokoll ZZA
 ### 12.05.2026 (Treffen in Elmshorn)
