@@ -11,7 +11,7 @@ bitmap[x][y] bit 2 -> pixelMatrix[x][y+32] grün\
 bitmap[x][y] bit 1 -> pixelMatrix[x][y+48] rot\
 bitmap[x][y] bit 0 -> pixelMatrix[x][y+48] grün
 
-Dieser aufbau dient dem schnelleren schreiben, da man dann im code alle pins von Port A auf einmal setzen kann und somit theoretisch nur ~1/4 der zeit benötigt um die gesamte Pixel Matrix zu beschreiben.
+Dieser aufbau dient dem schnelleren schreiben, da man dann im code alle pins von Port A auf einmal setzen kann und somit theoretisch nur ~1/8 der zeit benötigt um die gesamte Pixel Matrix zu beschreiben.
 
 ![alt text](matrixAnsteuerung.png)
 
