@@ -7,6 +7,7 @@
 #define NR_OF_PXL_SECTION WIDTH*HEIGHT_SECTION
 
 // other
+#define BLACK 0
 #define GREEN 1
 #define RED 2
 #define YELLOW 3
