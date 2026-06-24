@@ -1,9 +1,9 @@
-#include <digitalWriteFast.h>
-#include <string.h>
-#include <stdint.h>
-#include "imageData.h"
+#include <Arduino.h>
+#include "Display.h"
+#include "Config.h"
 
 /*
+// Flachbandkabel
 Pin 01   D_G         red
 Pin 03   D_R         green
 Pin 05   CLK         orange
@@ -17,6 +17,7 @@ Pin 18   EN_G        purple
 Pin 19   not used
 sonst.   GND
 
+// Arduino
 https://docs.arduino.cc/resources/pinouts/A000067-full-pinout.pdf
 // Section 1
 PIN_1_R D28 (PA0)
@@ -46,42 +47,7 @@ PIN_A0 D49 (PL0)
 #define PIN_EN_R 11
 #define PIN_EN_G 12
 
-
-// Panel Measurements
-#define WIDTH 200
-#define HEIGHT_SECTION 16
-#define HEIGHT_ALL 64
-#define NR_OF_PXL_SECTION WIDTH*HEIGHT_SECTION
-
-// other
-#define GREEN 1
-#define RED 2
-#define YELLOW 3
-
-uint8_t bitmap[WIDTH][HEIGHT_SECTION];
-
-/* mode:
-0 = all 0
-1 = all red 1
-2 = all green 1
-3 = all 1 
-4 = file from imageData.h
-*/
-void fillMatrix(uint8_t color){
-        uint8_t value = 0;
-        value = (color<<6) |
-                (color<<4) |
-                (color<<2) |
-                color;
-        memset(bitmap,value,sizeof(bitmap));
-}
-
-void pictureToMatrix(){
-    memcpy_P(bitmap,imageData,sizeof(bitmap));
-}
-
-// Inital setup
-void setup() {
+void Display::init(){
     // GPIO
     DDRA = 0xff; // set pins (PA0-PA7) output (ATmega640-1280-1281-2560-2561-Datasheet-DS40002211A.pdf, p.68)
     PORTA = 0x00; // off by default
@@ -93,18 +59,11 @@ void setup() {
     pinModeFast(PIN_STR, OUTPUT);
     pinModeFast(PIN_EN_R, OUTPUT);
     pinModeFast(PIN_EN_G, OUTPUT);
-
-    // Inital Values
-    analogWrite(PIN_EN_R, 0);  // active LOW  -> 100% Brightness = 0
-    analogWrite(PIN_EN_G, 0);  //             -> 0% Brightness = 255
-
-    fillMatrix(YELLOW); // bitmap variable overwritten in funtion
-    //pictureToMatrix();
 }
 
-// Main Loop
-void loop() {
-    // Set whole Diplay like in the matrices defined
+// Set whole Diplay to the values from bitmap
+void Display::refresh(){
+    Display::enable(0,0); // turn display on
     for (int y = 0; y<HEIGHT_SECTION; y++) {
         uint8_t yfix;
         if(y == 15) yfix = 0;
@@ -122,12 +81,14 @@ void loop() {
         // Latch the whole display
         digitalWriteFast(PIN_STR, true);
         digitalWriteFast(PIN_STR, false);
+
     }
-    /*
-    analogWrite(PIN_EN_R, 255);  // active LOW  -> 100% Brightness = 0
-    analogWrite(PIN_EN_G, 255);  //             -> 0% Brightness = 255
-    delay(15);
-    analogWrite(PIN_EN_R, 0);  // active LOW  -> 100% Brightness = 0
-    analogWrite(PIN_EN_G, 0);  //             -> 0% Brightness = 255
-    */
+    Display::enable(1,1); // turn off while calculating other things, prevents last line from looking brighter
+}
+
+// enable(red,green), active LOW -> 1 = off, 0 = on
+// example: enable(0,1) -> red on, green off
+void Display::enable(uint8_t r,uint8_t g){
+    digitalWriteFast(PIN_EN_R) = r;
+    digitalWriteFast(PIN_EN_G) = g;
 }
