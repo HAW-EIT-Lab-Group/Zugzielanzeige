@@ -3,20 +3,19 @@
 #include <stdint.h>
 #include "imageData.h"
 
+// Pin 01   D_G         red
+// Pin 03   D_R         green
+// Pin 05   CLK         orange
+// Pin 07   STR         yellow
+// Pin 09   A0          white
+// Pin 11   A1          grey
+// Pin 13   A2          black
+// Pin 15   CS          brown
+// Pin 17   EN_R        blue
+// Pin 18   EN_G        purple
+// Pin 19   not used
+// sonst.   GND
 /*
-Pin 01   D_G         red
-Pin 03   D_R         green
-Pin 05   CLK         orange
-Pin 07   STR         yellow
-Pin 09   A0          white
-Pin 11   A1          grey
-Pin 13   A2          black
-Pin 15   CS          brown
-Pin 17   EN_R        blue
-Pin 18   EN_G        purple
-Pin 19   not used
-sonst.   GND
-
 // Section 1
 PIN_1_R D28 (PA0)
 PIN_1_G D29 (PA1)
@@ -36,8 +35,8 @@ PIN_4_G D23 (PA7)
 // Global for all Sections
 #define PIN_CLK 38
 #define PIN_STR 40
-#define PIN_EN_R 42
-#define PIN_EN_G 44
+#define PIN_EN_R 11
+#define PIN_EN_G 12
 
 #define PIN_A0 46
 #define PIN_A1 48
@@ -49,57 +48,39 @@ PIN_4_G D23 (PA7)
 #define HEIGHT_SECTION 16
 #define HEIGHT_ALL 64
 #define NR_OF_PXL_SECTION WIDTH*HEIGHT_SECTION
-#define NR_OF_SECTIONS 4
 
-// other
-#define GREEN 1
-#define RED 2
-#define YELLOW 3
+uint8_t bitmap[WIDTH][HEIGHT_SECTION];
 
-class Bitmap{
-    private:
-        uint8_t matrix[WIDTH][HEIGHT_SECTION];
-    public:
-        // konstruktor
-        Bitmap(){ 
-            fill(0);
-        }
-
-        // methods
-        void fill(uint8_t color){
-            /* color:
-            0 = 0b00 = aus
-            1 = 0b01 = green
-            2 = 0b10 = red
-            3 = 0b11 = yellow
-            */
-            uint8_t value = (color<<6) | // to fill each pixel with the same r/g configuration
-                            (color<<4) | // color red = 0b10 -> matrix[x][y] = 0b10101010
-                            (color<<2) | 
-                            color; 
-            memset(matrix,value,sizeof(matrix));
-        }
-
-
-        // set bitmap to picture stored in imageData.h
-        void setPicture(){
-            memcpy_P(matrix,imageData,sizeof(matrix));
-        }
-
-        void setPixel(uint8_t x, uint8_t y64, uint8_t color){
-            uint8_t yshift,y16;
-            yshift = ((NR_OF_SECTIONS-1) - y64/16) * 2; // calculate bit shift amount for area corresponding to section, *2 beacause 1bit/pixel
-            y16 = y64%HEIGHT_SECTION;
-            matrix[x][y16] = (matrix[x][y16] & ~(0b11<<yshift)) | color<<yshift; // copy row, delete pixel, insert new pixel
-        }
-
-        uint8_t get(uint8_t x, uint8_t y){
-            return matrix[x][y];
-        }
-};
-
-
-Bitmap bitmap;
+/* mode:
+0 = all 0
+1 = all red 1
+2 = all green 1
+3 = all 1 
+4 = file from imageData.h
+*/
+void setBitmap(uint8_t mode){
+    switch (mode){
+        case 0: // off
+            memset(bitmap,0,sizeof(bitmap));
+            break;
+        case 1: // red
+            memset(bitmap,0b10101010,sizeof(bitmap));
+            break;
+        case 2: // green
+            memset(bitmap,0b01010101,sizeof(bitmap));
+            break;
+        case 3: // yellow
+            memset(bitmap,0b11111111,sizeof(bitmap));
+            break;
+        case 4: // image
+            memcpy_P(bitmap,imageData,sizeof(bitmap));
+            break; 
+        default: // pixel 1 set to red, rest off
+            memset(bitmap,0,sizeof(bitmap));
+            memset(bitmap,0b10000000,1);
+            break;
+    }
+}
 
 
 // Inital setup
@@ -122,14 +103,17 @@ void setup() {
     analogWrite(PIN_EN_R, 0);  // active LOW  -> 100% Brightness = 0
     analogWrite(PIN_EN_G, 0);  //             -> 0% Brightness = 255
 
-    bitmap.setPicture(); // bitmap variable overwritten in funtion
+    setBitmap(4); // bitmap variable overwritten in funtion
 }
 
 // Main Loop
 void loop() {
-    delayMicroseconds(10); // game calc sim
     // Set whole Diplay like in the matrices defined
-    for (int y = 0; y<HEIGHT_SECTION; y++) {       
+    for (int y = 0; y<HEIGHT_SECTION; y++) {
+        uint8_t yfix;
+        if(y == 15) yfix = 0;
+        else yfix = y + 1;
+        
         //Row selection
         digitalWriteFast(PIN_A0, (y & 0x01) != 0);
         digitalWriteFast(PIN_A1, (y & 0x02) != 0);
@@ -137,7 +121,7 @@ void loop() {
         digitalWriteFast(PIN_CS, y >= 8);
 
         for(int x = 0; x<WIDTH;x++){
-            PORTA = bitmap.get(x,y);
+            PORTA = bitmap[x][yfix];
             digitalWriteFast(PIN_CLK, true);
             digitalWriteFast(PIN_CLK, false);
         }
@@ -146,4 +130,5 @@ void loop() {
         digitalWriteFast(PIN_STR, true);
         digitalWriteFast(PIN_STR, false);
     }
+    delay(10);
 }
