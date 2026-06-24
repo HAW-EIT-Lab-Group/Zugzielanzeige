@@ -1,6 +1,8 @@
 # Dokumentation Zugzielanzeige (ZZA)
 - [Dokumentation Zugzielanzeige (ZZA)](#dokumentation-zugzielanzeige-zza)
   - [Aufbau ZZA](#aufbau-zza)
+    - [Sensoren](#sensoren)
+    - [Weitere Kabel](#weitere-kabel)
     - [LED Matrix Ansteuerung](#led-matrix-ansteuerung)
       - [Pin belegung Flachbandkabel:](#pin-belegung-flachbandkabel)
       - [Anschluss an µ-Controller](#anschluss-an-µ-controller)
@@ -47,6 +49,15 @@ flowchart TD
 
 Insgesamt 7 Netzteile, 3,5 für jede Seite
 
+### Sensoren
+- CT1:      Temp. Sensor Side B
+- CT2:      verm. Temp Sensor Kühlkörper
+- CT3:      Temp. Sensor Side A
+- CFF:      LDR Side A
+- CFB:      LDR Side A
+
+### Weitere Kabel
+- CD0:      Steuerung wärmetauscher ö.ä., 5V input über Opto22 240D10 Relay
 ---
 ### LED Matrix Ansteuerung
 
