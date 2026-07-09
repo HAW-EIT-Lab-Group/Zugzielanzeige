@@ -27,6 +27,17 @@ void Graphics::drawPixel(uint8_t x, uint8_t y, uint8_t color){
     matrix[x][y16] = (matrix[x][y16] & ~(0b11<<yshift)) | color<<yshift; // copy row, delete pixel, insert new pixel     
 }
 
+// fill rectangle with color
+void Graphics::drawRect(uint8_t x1, uint8_t y1,uint8_t x2, uint8_t y2, uint8_t color){
+    for(int x = 0;x<WIDTH;x++){
+        for(int y = 0;y<HEIGHT_ALL;y++){
+            if(x>=x1 && x<=x2 && y>=y1 && y<=y2){
+                drawPixel(x,y,color);
+            }
+        }
+    }
+}
+
 // copy image stored in imageData.h to matrix
 void Graphics::loadImage(){
     memcpy_P(bitmap,imageData,sizeof(bitmap));
