@@ -1,7 +1,8 @@
 #include <Arduino.h>
 #include "Display.h"
-#include "Config.h"
-
+#include "config.h"
+#include "digitalWriteFast.h"
+#include "Graphics.h"
 /*
 // Flachbandkabel
 Pin 01   D_G         red
@@ -73,7 +74,7 @@ void Display::refresh(){
         PORTL = (PORTL & 0xf0) | (0x0f & y); // clear bits, copy masked y into register
 
         for(int x = 0; x<WIDTH;x++){
-            PORTA = bitmap[x][yfix];
+            PORTA = Graphics::bitmap[x][yfix];
             digitalWriteFast(PIN_CLK, true);
             digitalWriteFast(PIN_CLK, false);
         }
@@ -89,6 +90,6 @@ void Display::refresh(){
 // enable(red,green), active LOW -> 1 = off, 0 = on
 // example: enable(0,1) -> red on, green off
 void Display::enable(uint8_t r,uint8_t g){
-    digitalWriteFast(PIN_EN_R) = r;
-    digitalWriteFast(PIN_EN_G) = g;
+    digitalWriteFast(PIN_EN_R,r);
+    digitalWriteFast(PIN_EN_G,g);
 }
