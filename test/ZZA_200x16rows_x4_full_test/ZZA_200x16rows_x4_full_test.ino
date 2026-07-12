@@ -98,8 +98,8 @@ void setup() {
     analogWrite(PIN_EN_R, 0);  // active LOW  -> 100% Brightness = 0
     analogWrite(PIN_EN_G, 0);  //             -> 0% Brightness = 255
 
-    fillMatrix(YELLOW); // bitmap variable overwritten in funtion
-    //pictureToMatrix();
+    //fillMatrix(YELLOW); // bitmap variable overwritten in funtion
+    pictureToMatrix();
 }
 
 // Main Loop
