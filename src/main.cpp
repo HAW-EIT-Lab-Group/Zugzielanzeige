@@ -7,6 +7,7 @@ void setup(){
     Display::init();
 
     Graphics::loadImage();
+    Display::refresh();
 }
 
 void loop(){

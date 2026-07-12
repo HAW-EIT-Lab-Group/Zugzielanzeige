@@ -1,8 +1,9 @@
 #include <Arduino.h>
 #include "Graphics.h"
-#include "Config.h"
+#include "config.h"
+#include "imageData.h"
 
-uint8_t bitmap[WIDTH][HEIGHT];
+uint8_t Graphics::bitmap[WIDTH][HEIGHT_SECTION];
 
 // completly clear matrix
 void Graphics::clear(){
@@ -20,11 +21,11 @@ void Graphics::fill(uint8_t color){
 }
 
 // set selected pixel to selected color, keep the rest 
-void Graphics::drawPixel(uint8_t x, uint8_t y, uint8_t color){
+void Graphics::drawPixel(uint8_t x, uint8_t y64, uint8_t color){
     uint8_t yshift,y16;
-    yshift = ((NR_OF_SECTIONS-1) - y64/16) * 2; // calculate bit shift amount for area corresponding to section, *2 beacause 1bit/pixel
-    y16 = y64%HEIGHT_SECTION;
-    matrix[x][y16] = (matrix[x][y16] & ~(0b11<<yshift)) | color<<yshift; // copy row, delete pixel, insert new pixel     
+    yshift = ((NR_OF_SECTIONS-1) - y64/16) * 2; // calculate bit shift amount for area corresponding to section, *2 because 1bit/pixel
+    y16 = y64 % HEIGHT_SECTION;
+    bitmap[x][y16] = (bitmap[x][y16] & ~(0b11<<yshift)) | color<<yshift; // copy row, delete pixel, insert new pixel     
 }
 
 // fill rectangle with color

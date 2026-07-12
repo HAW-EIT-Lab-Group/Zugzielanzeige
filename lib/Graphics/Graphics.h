@@ -3,7 +3,7 @@
 #include "config.h"
 
 namespace Graphics{
-    extern uint8_t bitmap[WIDTH][HEIGHT];
+    extern uint8_t bitmap[WIDTH][HEIGHT_SECTION];
     // set whole bitmap to BLACK, overwrites current values
     void clear();
 
@@ -30,7 +30,7 @@ namespace Graphics{
     // GREEN = 1
     // RED = 2
     // YELLOW = 3
-    void drawRect(uint8_t x1, uint8_t y1,uint8_t x2, uint8_t y2, uint8_t color)
+    void drawRect(uint8_t x1, uint8_t y1,uint8_t x2, uint8_t y2, uint8_t color);
 
     // loads image store in data/imageData.h into matrix
     void loadImage();
