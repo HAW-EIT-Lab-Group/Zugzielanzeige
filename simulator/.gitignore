@@ -1,0 +1,6 @@
+build/
+ausgabe/
+zza_sim.exe
+*.obj
+*.pdb
+*.ilk
