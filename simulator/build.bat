@@ -46,6 +46,16 @@ if errorlevel 1 (
 )
 
 :compiler_da
+rem --- Laeuft der Simulator noch? Dann kann die .exe nicht ersetzt werden ----
+tasklist /fi "IMAGENAME eq zza_sim.exe" 2>nul | find /i "zza_sim.exe" >nul
+if not errorlevel 1 (
+    echo.
+    echo [Fehler] Der Simulator laeuft noch - bitte das Fenster schliessen.
+    echo          Sonst kann der Linker zza_sim.exe nicht ueberschreiben
+    echo          ^(Meldung "LNK1104: Datei kann nicht geoeffnet werden"^).
+    exit /b 1
+)
+
 if not exist "%BUILD%" mkdir "%BUILD%"
 
 rem --- Spielquellen einsammeln ----------------------------------------------
@@ -60,7 +70,9 @@ for /d %%d in ("%GAME%\lib\*") do set "INCLUDES=!INCLUDES! /I"%%d""
 for /r "%GAME%\lib" %%f in (*.cpp) do call :quelleHinzu "%%f"
 
 echo [Build] Uebersetze...
-cl /nologo /EHsc /O2 /W3 /std:c++17 /D_CRT_SECURE_NO_WARNINGS ^
+rem /MT bindet die C-Laufzeit fest ein: die fertige zza_sim.exe laeuft dann auf
+rem jedem Windows-Rechner, ohne dass das "Visual C++ Redistributable" noetig ist.
+cl /nologo /EHsc /O2 /W3 /std:c++17 /MT /D_CRT_SECURE_NO_WARNINGS ^
    /wd4244 /wd4267 /wd4838 /wd4996 ^
    !INCLUDES! ^
    /Fo"%BUILD%\\" /Fd"%BUILD%\\" /Fe"%SIM%\zza_sim.exe" ^

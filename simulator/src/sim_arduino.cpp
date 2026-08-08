@@ -95,6 +95,31 @@ void pinMode(uint8_t, uint8_t)      {}
 void digitalWrite(uint8_t, uint8_t) {}
 int  digitalRead(uint8_t)           { return 0; }
 
+// ADC-Attrappe: eigener Rauschgenerator, unabhaengig von random(), damit ein
+// "randomSeed(analogRead(A0))" im Spiel nicht die Folge von random() stoert.
+namespace
+{
+    uint32_t g_rauschZustand = 0x2BAD1DEA;
+}
+
+void SimRuntime::analogRauschenSetzen(uint32_t start)
+{
+    g_rauschZustand = start ? start : 0x2BAD1DEA;
+}
+
+int analogRead(uint8_t)
+{
+    uint32_t x = g_rauschZustand;
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
+    g_rauschZustand = x;
+    return (int)(x & 0x3FF); // 10 Bit wie der AVR-ADC
+}
+
+void analogWrite(uint8_t, int)   {}
+void analogReference(uint8_t)    {}
+
 // --- Serial -----------------------------------------------------------------
 SimSerial Serial;
 

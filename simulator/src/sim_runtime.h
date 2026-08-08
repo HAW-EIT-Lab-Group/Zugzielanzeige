@@ -13,6 +13,10 @@ namespace SimRuntime
     // Tastendruck in den Serial-Empfangspuffer legen (Serial.available()/read())
     void tasteSenden(char c);
 
+    // Startwert des ADC-Rauschens (analogRead). Steuert ueber das
+    // randomSeed(analogRead(...)) des Spiels, welches Spiel gewuerfelt wird.
+    void analogRauschenSetzen(uint32_t start);
+
     // Serial-Ausgaben des Spiels (Serial.println(...)), 0 = aelteste
     int         logAnzahl();
     const char *logZeile(int i);

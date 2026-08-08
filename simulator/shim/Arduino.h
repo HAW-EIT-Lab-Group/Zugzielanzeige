@@ -33,6 +33,33 @@ void pinMode(uint8_t pin, uint8_t mode);
 void digitalWrite(uint8_t pin, uint8_t value);
 int  digitalRead(uint8_t pin);
 
+// Analogeingaenge des Mega2560 (A0 = Pin 54)
+#define A0 54
+#define A1 55
+#define A2 56
+#define A3 57
+#define A4 58
+#define A5 59
+#define A6 60
+#define A7 61
+#define A8 62
+#define A9 63
+#define A10 64
+#define A11 65
+#define A12 66
+#define A13 67
+#define A14 68
+#define A15 69
+
+// Liefert wie der echte ADC 0..1023. Ein offener Eingang rauscht auf der
+// Hardware - im Simulator ist das Rauschen zwar auch bei jedem Aufruf anders,
+// aber ueber Programmlaeufe hinweg IMMER dieselbe Folge. Damit bleibt ein
+// "randomSeed(analogRead(A0))" reproduzierbar; mit "--seed N" laesst sich
+// bewusst ein anderes Spiel erzeugen.
+int  analogRead(uint8_t pin);
+void analogWrite(uint8_t pin, int value);
+void analogReference(uint8_t mode);
+
 // --- Zufall ----------------------------------------------------------------
 // Gleiche Bedeutung wie auf dem Arduino: random(n) liefert 0..n-1,
 // random(a,b) liefert a..b-1.

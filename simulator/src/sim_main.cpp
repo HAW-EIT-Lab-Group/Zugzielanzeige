@@ -598,6 +598,8 @@ static void hilfeAusgeben()
            "  zza_sim.exe --ms 6000 [--keys dd] [--dump datei.txt]\n"
            "                                    ohne Fenster rechnen und Bitmatrix als Text ausgeben\n"
            "  zza_sim.exe --autoquit 5 [--shot] Fenster oeffnen, nach 5 s beenden (fuer Skripte)\n"
+           "  zza_sim.exe --seed 42             anderes Spiel wuerfeln (wirkt auf analogRead)\n"
+           "                                    ohne --seed laeuft jeder Start exakt gleich ab\n"
            "  zza_sim.exe --help                diese Hilfe\n");
 }
 
@@ -616,6 +618,8 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i], "--ms")   && i + 1 < argc) { kopflosMs = strtoul(argv[++i], NULL, 10); kopflos = true; }
         else if (!strcmp(argv[i], "--keys") && i + 1 < argc) { tasten = argv[++i]; }
         else if (!strcmp(argv[i], "--dump") && i + 1 < argc) { dumpDatei = argv[++i]; }
+        else if (!strcmp(argv[i], "--seed") && i + 1 < argc)
+            SimRuntime::analogRauschenSetzen((uint32_t)strtoul(argv[++i], NULL, 10));
         else if (!strcmp(argv[i], "--autoquit") && i + 1 < argc) { autoQuitS = atof(argv[++i]); }
         else if (!strcmp(argv[i], "--shot")) { schussBeimEnde = true; }
         else { printf("Unbekannte Option: %s\n", argv[i]); hilfeAusgeben(); return 1; }
