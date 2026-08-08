@@ -29,19 +29,38 @@
 #define DOT_COLS 15
 #define DOT_ROWS 7
 
-// Geschwindigkeiten und Modus-Zeiten stehen pro Level in levelTabelle[] und
-// werden zur Laufzeit nach pacmanTickMs/geistTickMs/scatterMs/chaseMs/frightMs
-// geladen. Level 1 läuft mit 40ms - zweimal um Faktor 1,5 beschleunigt,
-// ausgehend von den ursprünglichen 90ms.
-#define LEVEL_STUFEN 5
+// Basistakt: bei 100% legt eine Figur pro BASIS_TICK_MS einen Pixel zurück.
+// 40ms ist so gewählt, dass Level 1 (Pacman 80%) wieder auf die bisherigen
+// 50ms/Pixel kommt - das bisherige Spielgefühl bleibt also erhalten.
+#define BASIS_TICK_MS 40
+#define LEVEL_STUFEN 4
+
+// Augen sind auf dem Rückweg schneller als alles andere (wie im Original),
+// ebenfalls um 15% entschärft
+#define AUGEN_PCT 128
+
+// Fällt der Fright-Rest darunter, blinken die Geister doppelt so schnell -
+// das ist die Entsprechung zu den "Flashes" der Original-Tabelle und kündigt
+// das Ende des Energizers an.
+#define FRIGHT_WARN_MS 2000
+
+// Notbremse aus dem Original: wer aufhört zu fressen, bekommt die Geister
+// trotzdem. Nach dieser Zeit ohne gefressenen Punkt kommt der nächste raus.
+#define FREIGABE_TIMER_L1_MS 4000
+#define FREIGABE_TIMER_L5_MS 3000
+
+// Breite der Tunnelzone an beiden Rändern, in der Geister ausgebremst werden
+#define TUNNEL_ZONE 15
 
 // Extraleben bei diesen Punktzahlen (je einmal pro Spiel)
 #define BONUS_LEBEN_1 1000
 #define BONUS_LEBEN_2 3000
 
-// Energizer: zwei pro Level, einer in der linken, einer in der rechten
-// Spielfeldhälfte. Sie ersetzen jeweils einen normalen Punkt.
-#define ENERGIZER_ANZAHL 2
+// Energizer: vier pro Level. Das Spielfeld wird in vier Quadranten geteilt
+// (links/rechts x oben/unten), in jedem liegt genau einer an zufälliger
+// Stelle. Sie ersetzen jeweils einen normalen Punkt. Gültige Punktzellen je
+// Quadrant (per Skript geprüft): 18 / 24 / 24 / 30 - überall genug Auswahl.
+#define ENERGIZER_ANZAHL 4
 #define PUNKTE_ENERGIZER 50
 // Gefressene Geister während EINES Energizers: 200/400/800/1600.
 // Der Multiplikator wird beim Ablaufen des Energizers zurückgesetzt,
@@ -117,6 +136,10 @@
 #define PINKY_DOTS 20
 #define INKY_DOTS 50
 
+// So viele Punkte vor der Freigabe fängt der wartende Geist an zu blinken
+// (Sprite <-> dunkel), damit man sein Erscheinen kommen sieht
+#define SPAWN_WARNUNG_DOTS 5
+
 #define KACHEL DOT_PITCH // eine "Kachel" des Original-Spiels = 9 px Raster
 
 // ---- HUD (Positionen aus bild.png ausgemessen) ----
@@ -134,10 +157,34 @@
 #define LEBEN_ICON_X 1
 #define LEBEN_MAX 3
 
-#define TOD_PAUSE_MS 1500 // Pause nach Tod bzw. Game Over
+// Ablauf beim Sterben, in drei Schritten:
+//  1. alles friert ein, die Geister bleiben stehen wo sie sind - so sieht man,
+//     welcher Geist einen erwischt hat
+//  2. die Geister verschwinden, Pacman fällt in sich zusammen (Animation)
+//  3. kurze Pause, dann Leben abziehen und neu aufstellen bzw. Game Over
+#define TOD_FREEZE_MS 1000
+#define TOD_ANIM_MS 1500
+#define TOD_PAUSE_MS 400
+#define TOD_FRAMES 5
+
+// Game-Over-Bildschirm: der Hinweis erscheint später als die Eingabe frei
+// wird - man kann also schon neu starten, bevor "PRESS BUTTON" dasteht
+#define GAMEOVER_EINGABE_MS 1000
+#define GAMEOVER_PROMPT_MS 3000
+
+// Startbildschirm und Countdown vor dem Losspielen
+#define START_SCALE 5 // Vergrößerung des Pacman-Symbols
+#define BEREIT_MS 1000
+
+// Vier gelbe Pixel unten links im Originalbild, die nichts darstellen
+#define ARTEFAKT_X0 3
+#define ARTEFAKT_X1 4
+#define ARTEFAKT_Y0 58
+#define ARTEFAKT_Y1 59
 
 enum Richtung { OBEN, UNTEN, LINKS, RECHTS, KEINE };
-enum SpielStatus { LAEUFT, STIRBT, LEVEL_GESCHAFFT, GAMEOVER };
+enum SpielStatus { STARTBILDSCHIRM, BEREIT, LAEUFT, TOD_FREEZE, TOD_ANIM, TOD_WARTEN,
+                   LEVEL_GESCHAFFT, GAMEOVER };
 // AUGEN: gefressener Geist, der als reines Augenpaar zurück ins Haus wandert.
 // In diesem Zustand hat er KEINE Hitbox - er kann Pacman weder töten noch
 // erneut gefressen werden.
@@ -209,6 +256,40 @@ static const uint8_t geistIconGruen[SPRITE_SIZE][SPRITE_SIZE] PROGMEM = {
     {1,1,1,1,1,1},
     {1,1,1,1,1,1},
     {1,0,1,1,0,1},
+};
+
+// Sterbe-Animation: Pacman fällt in sich zusammen, bis nichts mehr übrig ist
+static const uint8_t todIcon[TOD_FRAMES][SPRITE_SIZE][SPRITE_SIZE] PROGMEM = {
+    {{0,3,3,3,3,0},
+     {3,3,3,3,3,3},
+     {3,3,3,3,3,3},
+     {3,3,3,3,3,3},
+     {3,3,3,3,3,3},
+     {0,3,3,3,3,0}},
+    {{0,0,0,0,0,0},
+     {0,3,3,3,3,0},
+     {0,3,3,3,3,0},
+     {0,3,3,3,3,0},
+     {0,3,3,3,3,0},
+     {0,0,0,0,0,0}},
+    {{0,0,0,0,0,0},
+     {0,0,0,0,0,0},
+     {0,0,3,3,0,0},
+     {0,0,3,3,0,0},
+     {0,0,0,0,0,0},
+     {0,0,0,0,0,0}},
+    {{0,0,0,0,0,0},
+     {0,0,0,0,0,0},
+     {0,0,3,0,0,0},
+     {0,0,0,0,0,0},
+     {0,0,0,0,0,0},
+     {0,0,0,0,0,0}},
+    {{0,0,0,0,0,0},
+     {0,0,0,0,0,0},
+     {0,0,0,0,0,0},
+     {0,0,0,0,0,0},
+     {0,0,0,0,0,0},
+     {0,0,0,0,0,0}},
 };
 
 // Nur die beiden grünen Augenbalken - so sieht ein gefressener Geist auf dem
@@ -285,20 +366,41 @@ static const uint8_t buchstabenFont[26][TEXT_H] PROGMEM = {
 // Mit steigendem Level werden beide Figuren schneller, die Geister holen
 // gegenüber Pacman auf und die Jagdphasen werden länger - das macht das
 // Spiel Stufe für Stufe schwerer. Ab LEVEL_STUFEN gilt die letzte Zeile.
+// Geschwindigkeiten in Prozent wie in den Original-Tabellen. 100% = ein Pixel
+// pro BASIS_TICK_MS. Jede Figur sammelt pro Basistakt ihren Prozentwert in
+// einem Akku; bei >=100 macht sie einen Schritt. So lassen sich auch 71% oder
+// 105% sauber abbilden, was mit festen ms-Werten nicht ging.
+//
+// Die Punktzahl-Schwellen (Elroy) sind auf unser Labyrinth umgerechnet:
+// wir haben 96 Punkte statt der 244 im Original, also Faktor ~0,39.
 struct LevelDaten
 {
-    uint8_t pacmanTick;
-    uint8_t geistTick;
-    uint16_t scatterMs;
-    uint16_t chaseMs;
-    uint16_t frightMs; // Dauer des Energizer-Effekts, wird pro Level kürzer
+    uint8_t pacPct, pacDotsPct;             // normal / während er Punkte frisst
+    uint8_t pacFrightPct, pacFrightDotsPct; // dasselbe während des Energizers
+    uint8_t geistPct, geistFrightPct, tunnelPct;
+    uint8_t elroy1Rest, elroy1Pct; // ab so vielen Restpunkten wird Blinky schneller
+    uint8_t elroy2Rest, elroy2Pct;
+    uint16_t frightMs; // 0 = Energizer gibt nur Punkte, kein Fright (wie ab Level 21)
 };
+// Stufen: Level 1 | 2-4 | 5-20 | 21+
+// Gegenüber den Original-Werten entschärft: alle Pacman-Tempi x0,90 und alle
+// Geister-Tempi x0,85 - das Spiel war sonst zu schwer. Die Verhältnisse
+// untereinander (Dots-Bremse, Tunnel, Elroy) bleiben dabei erhalten.
 static const LevelDaten levelTabelle[LEVEL_STUFEN] PROGMEM = {
-    {50, 55, 7000, 20000, 6000}, // Level 1
-    {46, 50, 6000, 22000, 5000}, // Level 2
-    {44, 46, 5000, 25000, 4000}, // Level 3
-    {40, 41, 4000, 28000, 3000}, // Level 4
-    {36, 38, 3000, 32000, 2000}, // Level 5 und höher
+    {72, 64, 81, 71,  64, 43, 34,   8, 68,   4, 72, 6000},
+    {81, 71, 86, 75,  72, 47, 38,  14, 77,   7, 81, 4000},
+    {90, 78, 90, 78,  81, 51, 43,  20, 85,  10, 89, 2000},
+    {81, 71, 81, 71,  81, 51, 43,  47, 85,  24, 89,    0},
+};
+
+// Scatter/Chase-Phasen in Sekunden, abwechselnd ab Scatter. 0 = Ende der
+// Liste, danach wird für immer gejagt. Die 1033s/1-60stel-Kuriosität des ROMs
+// ist weggelassen - sie bedeutet praktisch nichts anderes als "Chase forever".
+#define PHASEN_MAX 7
+static const uint8_t phasenTabelle[3][PHASEN_MAX] PROGMEM = {
+    {7, 20, 7, 20, 5, 20, 5}, // Level 1
+    {7, 20, 7, 20, 5, 0, 0},  // Level 2-4
+    {5, 20, 5, 20, 5, 0, 0},  // Level 5+
 };
 
 // y-Positionen der drei Leben-Symbole im Originalbild
@@ -324,7 +426,6 @@ struct Geist
 static Geist geister[GEIST_ANZAHL];
 
 static bool geistScatter;
-static unsigned long geistModusStart;
 
 static uint16_t punkteUebrig;
 static uint16_t dotsGegessen;
@@ -334,6 +435,9 @@ static uint8_t leben;
 static uint16_t level;
 static uint8_t bonusStufe;  // 0 = keins, 1 = 1000er vergeben, 2 = beide
 static uint8_t mundZaehler; // treibt die Kau-Animation
+static uint8_t todFrame;    // aktuelles Bild der Sterbe-Animation
+static unsigned long bereitZeit;        // Start der 2-Sekunden-Pause
+static bool gameoverPromptGezeichnet;   // "PRESS BUTTON" schon eingeblendet?
 static SpielStatus spielStatus;
 
 // Energizer: Index der belegten Punkt-Rasterzelle, 0xFFFF = keiner
@@ -346,11 +450,22 @@ static uint8_t geisterKette; // 0..GEIST_KETTE_MAX-1, verdoppelt die Punkte
 
 static bool blinkPhase;
 static unsigned long blinkStart;
-static uint8_t geistTickZaehler; // für die halbe Geschwindigkeit im Fright-Modus
+
+// Basistakt + Geschwindigkeits-Akkus (siehe LevelDaten)
+static unsigned long letzterTick;
+static uint8_t pacAkku;
+static uint8_t geistAkku[GEIST_ANZAHL];
+static bool dotImLetztenTick; // Pacman ist langsamer, während er Punkte frisst
+
+// Scatter/Chase-Phasenfolge
+static uint8_t phasenIdx;
+static unsigned long phasenStart;
+
+// Zeitpunkt des letzten gefressenen Punkts (für den Freigabe-Timer)
+static unsigned long letzterDotZeit;
 
 // aus levelTabelle[] geladen
-static uint8_t pacmanTickMs, geistTickMs;
-static uint16_t scatterMs, chaseMs, frightMs;
+static LevelDaten lvl;
 
 // Kau-Animation: im Wechsel offener Mund (in Laufrichtung) und geschlossener
 static const uint8_t (*pacmanIconAktuell())[SPRITE_SIZE]
@@ -361,16 +476,18 @@ static const uint8_t (*pacmanIconAktuell())[SPRITE_SIZE]
 
 static unsigned long todZeit;
 
-static unsigned long letzterPacmanZug;
-static unsigned long letzterGeistZug;
 
 static void neuesSpiel();
 static void spielerStirbt();
+static void spielStarten();
 static void energizerGefressen();
 static void geistGefressen(uint8_t idx);
 static void geistSchrittZuZiel(Geist &g, int16_t zielX, int16_t zielY);
 static void spritesLoeschen();
 static void spritesZeichnen();
+static bool spawnWarnungAktiv(uint8_t idx);
+static uint8_t levelStufe();
+static bool elroyAktiv();
 
 static inline bool bitLesen(const uint8_t *arr, uint16_t i) { return (arr[i >> 3] >> (i & 7)) & 1; }
 static inline void bitSetzen(uint8_t *arr, uint16_t i) { arr[i >> 3] |= (1 << (i & 7)); }
@@ -489,27 +606,30 @@ static void energizerZeichnen()
     }
 }
 
-// Wählt die n-te gültige Punktzelle in der linken bzw. rechten Spielfeldhälfte.
-// Zwei Durchläufe statt einer Kandidatenliste - spart RAM auf dem Mega.
-static uint16_t waehleEnergizer(bool rechteHaelfte, uint16_t nummer)
+// Wählt eine zufällige gültige Punktzelle im angegebenen Quadranten.
+// Zwei Durchläufe (zählen, dann die n-te heraussuchen) statt einer
+// Kandidatenliste - spart RAM auf dem Mega.
+static uint16_t waehleEnergizer(bool rechteHaelfte, bool untereHaelfte)
 {
     uint16_t anzahl = 0;
     for (uint8_t dr = 0; dr < DOT_ROWS; dr++)
         for (uint8_t dc = 0; dc < DOT_COLS; dc++)
         {
             if ((dc >= DOT_COLS / 2) != rechteHaelfte) continue;
+            if ((dr >= DOT_ROWS / 2) != untereHaelfte) continue;
             uint8_t x, y;
             if (dotZellPosition(dc, dr, x, y) && !istWand(x, y)) anzahl++;
         }
 
     if (anzahl == 0) return 0xFFFF;
 
-    uint16_t ziel = nummer % anzahl;
+    uint16_t ziel = (uint16_t)random(anzahl);
     uint16_t i = 0;
     for (uint8_t dr = 0; dr < DOT_ROWS; dr++)
         for (uint8_t dc = 0; dc < DOT_COLS; dc++)
         {
             if ((dc >= DOT_COLS / 2) != rechteHaelfte) continue;
+            if ((dr >= DOT_ROWS / 2) != untereHaelfte) continue;
             uint8_t x, y;
             if (!dotZellPosition(dc, dr, x, y) || istWand(x, y)) continue;
             if (i == ziel) return (uint16_t)dr * DOT_COLS + dc;
@@ -557,6 +677,75 @@ static void spriteLoeschen(uint8_t x, uint8_t y, int8_t xShift, int8_t yShift)
 
 // Übermalt die im Originalbild aufgemalten Deko-Geister im Haus, damit dort
 // nur die echten Spielfiguren zu sehen sind
+// --- Geschwindigkeiten in Prozent (siehe levelTabelle) ---
+
+static uint8_t pacProzent()
+{
+    if (frightAktiv)
+        return dotImLetztenTick ? lvl.pacFrightDotsPct : lvl.pacFrightPct;
+    return dotImLetztenTick ? lvl.pacDotsPct : lvl.pacPct;
+}
+
+// Blinky wird schneller, je weniger Punkte übrig sind ("Cruise Elroy")
+static bool elroyAktiv()
+{
+    return punkteUebrig <= lvl.elroy1Rest;
+}
+
+static uint8_t geistProzent(uint8_t idx)
+{
+    const Geist &g = geister[idx];
+
+    if (g.zustand == AUGEN) return AUGEN_PCT;
+    if (g.aengstlich) return lvl.geistFrightPct;
+
+    // Im Tunnel kriechen die Geister - das ist Pacmans einzige Chance,
+    // Abstand zu gewinnen
+    if (g.y == TUNNEL_MID &&
+        (g.x <= ANCHOR_X_MIN + TUNNEL_ZONE || g.x >= ANCHOR_X_MAX - TUNNEL_ZONE))
+        return lvl.tunnelPct;
+
+    if (idx == 0) // nur Blinky bekommt Elroy
+    {
+        if (punkteUebrig <= lvl.elroy2Rest) return lvl.elroy2Pct;
+        if (punkteUebrig <= lvl.elroy1Rest) return lvl.elroy1Pct;
+    }
+
+    return lvl.geistPct;
+}
+
+// Ab wie vielen gegessenen Punkten dieser Geist das Haus verlässt
+// (0 = steht von Anfang an draußen)
+static uint16_t geistFreigabeDots(uint8_t idx)
+{
+    if (idx == 1) return PINKY_DOTS;
+    if (idx == 2) return INKY_DOTS;
+    return 0;
+}
+
+// true, wenn der wartende Geist kurz vor seiner Freigabe steht und deshalb
+// als Vorwarnung blinken soll
+static bool spawnWarnungAktiv(uint8_t idx)
+{
+    uint16_t frei = geistFreigabeDots(idx);
+    if (frei < SPAWN_WARNUNG_DOTS) return false;
+    return dotsGegessen + SPAWN_WARNUNG_DOTS >= frei;
+}
+
+// Blinktakt der ängstlichen Geister. Läuft der Energizer bald ab, wird doppelt
+// so schnell geblinkt - das ist die Entsprechung zu den "Flashes" im Original
+// und warnt davor, dass die Geister gleich wieder gefährlich sind.
+static bool geistBlinkPhase()
+{
+    if (!frightAktiv) return blinkPhase;
+
+    unsigned long verstrichen = millis() - frightStart;
+    if (verstrichen < lvl.frightMs && (lvl.frightMs - verstrichen) <= FRIGHT_WARN_MS)
+        return (millis() / (BLINK_MS / 2)) & 1;
+
+    return blinkPhase;
+}
+
 // Alle Figuren vom Feld nehmen (Hintergrund wiederherstellen)
 static void spritesLoeschen()
 {
@@ -574,9 +763,14 @@ static void spritesZeichnen()
 {
     for (uint8_t i = 0; i < GEIST_ANZAHL; i++)
     {
+        // Kurz vor der Freigabe blinkt der wartende Geist: in der einen
+        // Blinkphase wird er einfach nicht gezeichnet (Hintergrund ist durch
+        // spritesLoeschen() schon wiederhergestellt) -> Bild/dunkel im Wechsel
+        if (geister[i].zustand == IM_HAUS && blinkPhase && spawnWarnungAktiv(i)) continue;
+
         const uint8_t (*icon)[SPRITE_SIZE];
         if (geister[i].zustand == AUGEN) icon = augenIcon; // nur die Augenbalken
-        else if (geister[i].aengstlich && blinkPhase) icon = geistIconGruen; // Fright: rot/grün
+        else if (geister[i].aengstlich && geistBlinkPhase()) icon = geistIconGruen; // Fright: rot/grün
         else icon = geistIcon;
 
         spriteZeichnen(geister[i].x, geister[i].y, icon, GEIST_X_SHIFT, GEIST_Y_SHIFT);
@@ -589,6 +783,14 @@ static void geisterhausLeeren()
 {
     for (uint8_t x = HAUS_X0; x <= HAUS_X1; x++)
         for (uint8_t y = HAUS_Y0; y <= HAUS_Y1; y++)
+            Graphics::drawPixel(x, y, BLACK);
+}
+
+// Übermalt die vier losen gelben Pixel unten links im Originalbild
+static void bildArtefakteEntfernen()
+{
+    for (uint8_t x = ARTEFAKT_X0; x <= ARTEFAKT_X1; x++)
+        for (uint8_t y = ARTEFAKT_Y0; y <= ARTEFAKT_Y1; y++)
             Graphics::drawPixel(x, y, BLACK);
 }
 
@@ -664,6 +866,44 @@ static void zeichneText(uint8_t x, uint8_t y, const char *text, uint8_t farbe)
                 if ((zeilen[row] >> (TEXT_W - 1 - col)) & 1)
                     Graphics::drawPixel(x + col, y + row, farbe);
     }
+}
+
+static void zeichneTextZentriert(uint8_t y, const char *text, uint8_t farbe)
+{
+    uint8_t n = 0;
+    while (text[n]) n++;
+    uint8_t breite = n * TEXT_PITCH - 1;
+    uint8_t x = (breite < WIDTH) ? (WIDTH - breite) / 2 : 0;
+    zeichneText(x, y, text, farbe);
+}
+
+// Zeichnet ein 6x6-Sprite vergrößert (jeder Pixel wird zu einem scale*scale
+// großen Block) - für den Pacman auf dem Startbildschirm
+static void zeichneGrossesIcon(uint8_t x0, uint8_t y0,
+                               const uint8_t icon[SPRITE_SIZE][SPRITE_SIZE], uint8_t scale)
+{
+    for (uint8_t sy = 0; sy < SPRITE_SIZE; sy++)
+        for (uint8_t sx = 0; sx < SPRITE_SIZE; sx++)
+        {
+            uint8_t farbe = pgm_read_byte(&icon[sy][sx]);
+            for (uint8_t dy = 0; dy < scale; dy++)
+                for (uint8_t dx = 0; dx < scale; dx++)
+                    Graphics::drawPixel(x0 + sx * scale + dx, y0 + sy * scale + dy, farbe);
+        }
+}
+
+static void startbildschirmZeichnen()
+{
+    Graphics::clear();
+    uint8_t breite = SPRITE_SIZE * START_SCALE;
+    zeichneGrossesIcon((WIDTH - breite) / 2, 6, pacmanIconRechts, START_SCALE);
+    zeichneTextZentriert(45, "PRESS BUTTON TO START", YELLOW);
+}
+
+static void gameoverBildschirmZeichnen()
+{
+    Graphics::clear();
+    zeichneTextZentriert(20, "GAMEOVER", RED);
 }
 
 // Leerer Bildschirm mit grüner Meldung, mittig ausgerichtet
@@ -804,25 +1044,14 @@ static void spielGewonnen()
 // (gegessene Punkte und Punktestand bleiben erhalten). Beim letzten Leben ist
 // Schluss: dann setzt neuesSpiel() den Punktestand zurück - der Highscore
 // bleibt aber stehen.
+// Startet nur die Sterbe-Sequenz. Das Leben wird erst am Ende abgezogen
+// (siehe Game::update), damit man vorher noch sieht, was passiert ist.
 static void spielerStirbt()
 {
-    if (leben > 0) leben--;
-    lebenZeichnen();
+    spielStatus = TOD_FREEZE;
     todZeit = millis();
-
-    if (leben == 0)
-    {
-        spielStatus = GAMEOVER;
-        Graphics::fill(RED);
-        Serial.print(F("Game Over! Punkte: "));
-        Serial.println(punkte);
-    }
-    else
-    {
-        spielStatus = STIRBT;
-        Serial.print(F("Leben verloren, uebrig: "));
-        Serial.println(leben);
-    }
+    todFrame = 0;
+    Serial.println(F("Erwischt!"));
 }
 
 static void bewegePacman()
@@ -838,7 +1067,6 @@ static void bewegePacman()
         return; // blockiert, Pacman bleibt stehen
 
     pacmanRichtung = effektiv;
-    spritesLoeschen(); // Spieler UND Geister, damit die Z-Reihenfolge stimmt
     mundZaehler++;
     pacmanX = nx;
     pacmanY = ny;
@@ -858,6 +1086,8 @@ static void bewegePacman()
             bitSetzen(dotEaten, idx);
             punkteUebrig--;
             dotsGegessen++;
+            dotImLetztenTick = true; // bremst Pacman im nächsten Takt
+            letzterDotZeit = millis();
 
             if (istEnergizer(idx))
             {
@@ -897,12 +1127,12 @@ static void bewegePacman()
         }
     }
 
-    spritesZeichnen(); // Geister zuerst, Pacman zuletzt -> Spieler liegt oben
+}
 
-    // Gleiche Regeln wie in bewegeGeister: ängstliche Geister werden gefressen
-    // statt tödlich zu sein, Augen haben gar keine Hitbox. (Hier fehlte die
-    // Prüfung bisher - deshalb starb man, wenn man selbst in einen ängstlichen
-    // Geist hineinlief, statt ihn zu fressen.)
+// Ängstliche Geister fressen, sonst sterben. Augen haben keine Hitbox.
+// Wird einmal pro Basistakt aufgerufen, nachdem sich alles bewegt hat.
+static void kollisionPruefen()
+{
     for (uint8_t i = 0; i < GEIST_ANZAHL; i++)
     {
         Geist &g = geister[i];
@@ -916,16 +1146,24 @@ static void bewegePacman()
     if (punkteUebrig == 0) spielGewonnen();
 }
 
-// Scatter/Chase-Wechsel wie im Original. Ein Moduswechsel ist der einzige
-// Anlass (außer einer Sackgasse), bei dem der Geist umkehren darf - das bricht
-// Endlosschleifen auf, in denen er sonst ewig im Kreis laufen könnte.
+// Scatter/Chase folgt jetzt der Phasenliste des Originals statt einem simplen
+// Hin und Her. Jeder Phasenwechsel erzwingt eine Richtungsumkehr - das ist
+// zugleich das, was Endlosschleifen der Geister aufbricht.
 static void geistModusPruefen(unsigned long jetzt)
 {
-    unsigned long dauer = geistScatter ? scatterMs : chaseMs;
-    if (jetzt - geistModusStart < dauer) return;
+    if (phasenIdx >= PHASEN_MAX) return; // Chase für immer
 
-    geistScatter = !geistScatter;
-    geistModusStart = jetzt;
+    uint8_t stufe = levelStufe();
+    if (stufe > 2) stufe = 2; // ab Level 21 gilt die 5+-Zeile
+    uint8_t dauerS = pgm_read_byte(&phasenTabelle[stufe][phasenIdx]);
+
+    if (dauerS != 0 && jetzt - phasenStart < (unsigned long)dauerS * 1000) return;
+
+    if (dauerS == 0) phasenIdx = PHASEN_MAX; // Liste zu Ende -> Chase forever
+    else phasenIdx++;
+
+    phasenStart = jetzt;
+    geistScatter = (phasenIdx < PHASEN_MAX) && ((phasenIdx & 1) == 0);
 
     for (uint8_t i = 0; i < GEIST_ANZAHL; i++)
     {
@@ -983,7 +1221,8 @@ static void richtungsVektor(Richtung r, int8_t &dx, int8_t &dy)
 // unterschiedlichen Verfolgungsmuster)
 static void geistZiel(uint8_t idx, int16_t &zx, int16_t &zy)
 {
-    if (geistScatter)
+    // Elroy-Blinky ignoriert Scatter und jagt durchgehend (wie im Original)
+    if (geistScatter && !(idx == 0 && elroyAktiv()))
     {
         switch (idx)
         {
@@ -1183,70 +1422,51 @@ static void geistGefressen(uint8_t idx)
     punkteZeichnen();
 
     // Körper weg, nur die Augen bleiben und laufen von hier aus zurück.
-    // Komplett neu zeichnen, damit der Spieler auch hier obenauf bleibt.
+    // Gezeichnet wird zentral am Ende des Basistakts.
     spritesLoeschen();
     g.aengstlich = false;
     g.zustand = AUGEN;
     spritesZeichnen();
+    (void)g;
 
     Serial.print(F("Geist gefressen: +"));
     Serial.println(wert);
 }
 
-// Bewegt alle aktiven Geister einen Schritt und prüft danach die Kollision
-// mit Pacman. Geister prüfen sich bewusst nicht gegeneinander.
-static void bewegeGeister()
+// Ein einzelner Schritt eines Geistes (ohne Zeichnen/Kollision - das macht
+// der Basistakt in Game::update für alle Figuren gemeinsam)
+static void geistSchritt(uint8_t idx)
 {
-    // Strikt in drei Durchläufen: erst alle bewegten Geister löschen, dann
-    // bewegen, dann ALLE (auch die wartenden) neu zeichnen. Im engen Haus
-    // überlappen sich die 6x6-Sprites, d.h. das Löschen eines Geistes radiert
-    // sonst Pixel des Nachbarn mit aus - genau das ließ den wartenden Geist
-    // zerfallen, während der andere zur Tür rutschte.
-    geistTickZaehler++;
+    Geist &g = geister[idx];
+    if (g.zustand == IM_HAUS) return; // wartet noch auf seine Freigabe
 
-    spritesLoeschen();
-
-    for (uint8_t i = 0; i < GEIST_ANZAHL; i++)
-    {
-        Geist &g = geister[i];
-        if (g.zustand == IM_HAUS) continue; // wartet noch auf seine Freigabe
-
-        // Ängstliche Geister laufen nur jeden zweiten Tick -> ca. 50% Tempo.
-        // Augen laufen mit vollem Tempo zurück.
-        if (g.aengstlich && (geistTickZaehler & 1)) continue;
-
-        if (g.zustand == AUGEN) bewegeAugen(i);
-        else if (g.zustand == VERLAESST_HAUS) bewegeGeistImHaus(i);
-        else bewegeGeistDraussen(i);
-    }
-
-    spritesZeichnen(); // Geister zuerst, Pacman zuletzt -> Spieler liegt oben
-
-    for (uint8_t i = 0; i < GEIST_ANZAHL; i++)
-    {
-        Geist &g = geister[i];
-        // AUGEN haben bewusst keine Hitbox: sie töten nicht und sind auch
-        // nicht erneut fressbar
-        if (g.zustand == IM_HAUS || g.zustand == AUGEN) continue;
-        if (!nah(pacmanX, pacmanY, g.x, g.y)) continue;
-
-        if (g.aengstlich) geistGefressen(i);
-        else { spielerStirbt(); return; }
-    }
+    if (g.zustand == AUGEN) bewegeAugen(idx);
+    else if (g.zustand == VERLAESST_HAUS) bewegeGeistImHaus(idx);
+    else bewegeGeistDraussen(idx);
 }
 
 static void tasteVerarbeiten(char c)
 {
+    if (c < 32) return; // Steuerzeichen wie Zeilenumbruch ignorieren
+
+    // Start- und Game-Over-Bildschirm reagieren auf jede Taste
+    if (spielStatus == STARTBILDSCHIRM) { spielStarten(); return; }
+
+    if (spielStatus == GAMEOVER)
+    {
+        // Eingabe wird erst nach einer Sekunde angenommen, damit ein
+        // Tastendruck aus dem laufenden Spiel nicht sofort neu startet
+        if (millis() - todZeit >= GAMEOVER_EINGABE_MS) spielStarten();
+        return;
+    }
+
     switch (c)
     {
         case 'w': case 'W': gewuenschteRichtung = OBEN; break;
         case 's': case 'S': gewuenschteRichtung = UNTEN; break;
         case 'a': case 'A': gewuenschteRichtung = LINKS; break;
         case 'd': case 'D': gewuenschteRichtung = RECHTS; break;
-        case 'r': case 'R':
-            if (spielStatus != LAEUFT) neuesSpiel();
-            break;
-        default: break; // z.B. Zeilenumbruch ignorieren
+        default: break;
     }
 }
 
@@ -1286,14 +1506,20 @@ static void rundeZuruecksetzen()
     for (uint8_t i = 0; i < GEIST_ANZAHL; i++) geister[i].aengstlich = false;
 
     spielStatus = LAEUFT;
-    letzterPacmanZug = millis();
-    letzterGeistZug = millis();
+
+    letzterTick = millis();
+    pacAkku = 0;
+    for (uint8_t i = 0; i < GEIST_ANZAHL; i++) geistAkku[i] = 0;
+    dotImLetztenTick = false;
+    letzterDotZeit = millis();
+    phasenIdx = 0;
+    phasenStart = millis();
 
     geistScatter = true; // wie im Original wird im Scatter-Modus gestartet
-    geistModusStart = millis();
 
     Graphics::loadImage(); // komplettes Originalbild (Deko + Wände + HUD-Text)
     geisterhausLeeren();
+    bildArtefakteEntfernen();
     alleDotsZeichnen();
     punkteZeichnen();
     lebenZeichnen();
@@ -1301,16 +1527,19 @@ static void rundeZuruecksetzen()
     spritesZeichnen(); // gleiche Z-Reihenfolge wie im Spielverlauf
 }
 
-// Lädt Tempo und Modus-Zeiten des aktuellen Levels; ab LEVEL_STUFEN bleibt
-// es bei der letzten (schnellsten) Zeile
+// Stufe der Level-Tabelle: 0 = Level 1, 1 = Level 2-4, 2 = Level 5-20, 3 = 21+
+static uint8_t levelStufe()
+{
+    if (level <= 1) return 0;
+    if (level <= 4) return 1;
+    if (level <= 20) return 2;
+    return 3;
+}
+
+// Lädt die Werte des aktuellen Levels aus der Tabelle
 static void levelDatenLaden()
 {
-    uint8_t idx = (level >= LEVEL_STUFEN) ? (LEVEL_STUFEN - 1) : (uint8_t)(level - 1);
-    pacmanTickMs = pgm_read_byte(&levelTabelle[idx].pacmanTick);
-    geistTickMs = pgm_read_byte(&levelTabelle[idx].geistTick);
-    scatterMs = pgm_read_word(&levelTabelle[idx].scatterMs);
-    chaseMs = pgm_read_word(&levelTabelle[idx].chaseMs);
-    frightMs = pgm_read_word(&levelTabelle[idx].frightMs);
+    memcpy_P(&lvl, &levelTabelle[levelStufe()], sizeof(LevelDaten));
 }
 
 // Baut das Labyrinth für das aktuelle Level neu auf. Punkte, Leben und
@@ -1324,10 +1553,11 @@ static void levelStarten()
     // frightAktiv/geisterKette/aengstlich werden zentral in
     // rundeZuruecksetzen() gelöscht (wird unten aufgerufen)
 
-    // Zwei Energizer pro Level: einer links, einer rechts. Die Multiplikatoren
-    // sorgen dafür, dass sie in jedem Level woanders liegen.
-    energizerIdx[0] = waehleEnergizer(false, level * 5);
-    energizerIdx[1] = waehleEnergizer(true, level * 3);
+    // Vier Energizer: je einer pro Quadrant, Position darin zufällig
+    energizerIdx[0] = waehleEnergizer(false, false); // oben links
+    energizerIdx[1] = waehleEnergizer(true, false);  // oben rechts
+    energizerIdx[2] = waehleEnergizer(false, true);  // unten links
+    energizerIdx[3] = waehleEnergizer(true, true);   // unten rechts
 
     // Punkte zählen (nur Rasterzellen, die nach der Verschiebung noch
     // vollständig im Labyrinth liegen und nicht auf einer Wand landen)
@@ -1362,13 +1592,30 @@ static void neuesSpiel()
 
     levelStarten();
 
-    Serial.println(F("Neues Spiel: WASD zum Bewegen, R zum Neustart"));
+    Serial.println(F("Neues Spiel: WASD zum Bewegen"));
+}
+
+// Spiel aufbauen und erst nach BEREIT_MS loslaufen lassen - das Feld ist
+// dann schon sichtbar, aber noch bewegt sich nichts
+static void spielStarten()
+{
+    neuesSpiel();
+    spielStatus = BEREIT;
+    bereitZeit = millis();
 }
 
 void Game::init()
 {
     Serial.begin(9600);
-    neuesSpiel();
+
+    // Zufallsgenerator anstoßen: ein offener Analogeingang liefert Rauschen.
+    // Ohne das würde random() nach jedem Reset dieselbe Folge liefern und die
+    // Energizer lägen jedes Mal an den gleichen Stellen.
+    randomSeed(analogRead(A0) ^ micros());
+
+    spielStatus = STARTBILDSCHIRM;
+    startbildschirmZeichnen();
+    Serial.println(F("Taste druecken zum Starten"));
 }
 
 void Game::update()
@@ -1377,6 +1624,24 @@ void Game::update()
 
     unsigned long jetzt = millis();
 
+    // Startbildschirm: wartet nur auf einen Tastendruck
+    if (spielStatus == STARTBILDSCHIRM) return;
+
+    // Feld steht, aber es geht erst nach der Pause los
+    if (spielStatus == BEREIT)
+    {
+        if (jetzt - bereitZeit < BEREIT_MS) return;
+
+        spielStatus = LAEUFT;
+        // Uhren erst jetzt starten, damit die Pause weder Phasen noch den
+        // Freigabe-Timer anschiebt
+        letzterTick = jetzt;
+        letzterDotZeit = jetzt;
+        phasenStart = jetzt;
+        blinkStart = jetzt;
+        return;
+    }
+
     if (spielStatus == LEVEL_GESCHAFFT)
     {
         // "LEVEL x REACHED" steht kurz, danach geht es im nächsten Level weiter
@@ -1384,18 +1649,74 @@ void Game::update()
         return;
     }
 
-    if (spielStatus == STIRBT)
+    // Schritt 1: alles steht still, die Geister bleiben sichtbar stehen
+    if (spielStatus == TOD_FREEZE)
     {
-        // Leben übrig: nur die Runde neu aufstellen, Punkte bleiben
-        if (jetzt - todZeit >= TOD_PAUSE_MS) rundeZuruecksetzen();
+        if (jetzt - todZeit < TOD_FREEZE_MS) return;
+
+        spritesLoeschen(); // Geister verschwinden
+        spriteZeichnen(pacmanX, pacmanY, todIcon[0], PACMAN_X_SHIFT, PACMAN_Y_SHIFT);
+        todFrame = 0;
+        spielStatus = TOD_ANIM;
+        todZeit = jetzt;
+        return;
+    }
+
+    // Schritt 2: Pacman fällt in sich zusammen
+    if (spielStatus == TOD_ANIM)
+    {
+        uint8_t frame = (uint8_t)((jetzt - todZeit) / (TOD_ANIM_MS / TOD_FRAMES));
+        if (frame >= TOD_FRAMES)
+        {
+            spielStatus = TOD_WARTEN;
+            todZeit = jetzt;
+            return;
+        }
+        if (frame != todFrame)
+        {
+            todFrame = frame;
+            spriteLoeschen(pacmanX, pacmanY, PACMAN_X_SHIFT, PACMAN_Y_SHIFT);
+            spriteZeichnen(pacmanX, pacmanY, todIcon[frame], PACMAN_X_SHIFT, PACMAN_Y_SHIFT);
+        }
+        return;
+    }
+
+    // Schritt 3: kurze Pause, dann Leben abziehen und weiter oder Game Over
+    if (spielStatus == TOD_WARTEN)
+    {
+        if (jetzt - todZeit < TOD_PAUSE_MS) return;
+
+        if (leben > 0) leben--;
+        lebenZeichnen();
+
+        if (leben == 0)
+        {
+            spielStatus = GAMEOVER;
+            todZeit = jetzt;
+            gameoverPromptGezeichnet = false;
+            gameoverBildschirmZeichnen();
+            Serial.print(F("Game Over! Punkte: "));
+            Serial.println(punkte);
+        }
+        else
+        {
+            Serial.print(F("Leben verloren, uebrig: "));
+            Serial.println(leben);
+            rundeZuruecksetzen();
+        }
         return;
     }
 
     if (spielStatus == GAMEOVER)
     {
-        // kein Leben mehr: komplett neues Spiel, Punkte zurück auf 0
-        if (jetzt - todZeit >= TOD_PAUSE_MS) neuesSpiel();
-        return;
+        // Der Hinweis kommt später als die Eingabefreigabe - wer schnell ist,
+        // kann schon vorher neu starten (siehe tasteVerarbeiten)
+        if (!gameoverPromptGezeichnet && jetzt - todZeit >= GAMEOVER_PROMPT_MS)
+        {
+            gameoverPromptGezeichnet = true;
+            zeichneTextZentriert(36, "PRESS BUTTON TO RESTART", YELLOW);
+        }
+        return; // bleibt stehen, bis eine Taste kommt
     }
 
     // spielStatus == LAEUFT
@@ -1408,24 +1729,56 @@ void Game::update()
     }
 
     // Energizer-Effekt abgelaufen?
-    if (frightAktiv && jetzt - frightStart >= frightMs) frightBeenden();
+    if (frightAktiv && jetzt - frightStart >= lvl.frightMs) frightBeenden();
 
-    // Freigabe der wartenden Geister nach gegessenen Punkten
+    // Freigabe der wartenden Geister nach gefressenen Punkten
     if (geister[1].zustand == IM_HAUS && dotsGegessen >= PINKY_DOTS)
         geister[1].zustand = VERLAESST_HAUS;
     if (geister[2].zustand == IM_HAUS && dotsGegessen >= INKY_DOTS)
         geister[2].zustand = VERLAESST_HAUS;
 
-    if (jetzt - letzterPacmanZug >= pacmanTickMs)
+    // Notbremse: wer aufhört zu fressen, bekommt trotzdem Besuch
+    unsigned long freigabeMs = (levelStufe() >= 2) ? FREIGABE_TIMER_L5_MS : FREIGABE_TIMER_L1_MS;
+    if (jetzt - letzterDotZeit >= freigabeMs)
     {
-        letzterPacmanZug = jetzt;
+        for (uint8_t i = 1; i < GEIST_ANZAHL; i++)
+        {
+            if (geister[i].zustand != IM_HAUS) continue;
+            geister[i].zustand = VERLAESST_HAUS;
+            break; // immer nur einen pro Ablauf
+        }
+        letzterDotZeit = jetzt;
+    }
+
+    geistModusPruefen(jetzt);
+
+    // Basistakt: jede Figur sammelt ihren Prozentwert und läuft bei >=100
+    // einen Pixel. Alles wird gemeinsam gelöscht, bewegt und gezeichnet -
+    // damit stimmt die Z-Reihenfolge und die Kollision wird einmal geprüft.
+    if (jetzt - letzterTick < BASIS_TICK_MS) return;
+    letzterTick = jetzt;
+
+    spritesLoeschen();
+
+    uint8_t pct = pacProzent();
+    dotImLetztenTick = false;
+    pacAkku += pct;
+    while (pacAkku >= 100 && spielStatus == LAEUFT)
+    {
+        pacAkku -= 100;
         bewegePacman();
     }
 
-    if (spielStatus == LAEUFT && jetzt - letzterGeistZug >= geistTickMs)
+    for (uint8_t i = 0; i < GEIST_ANZAHL; i++)
     {
-        letzterGeistZug = jetzt;
-        geistModusPruefen(jetzt);
-        bewegeGeister();
+        geistAkku[i] += geistProzent(i);
+        while (geistAkku[i] >= 100)
+        {
+            geistAkku[i] -= 100;
+            geistSchritt(i);
+        }
     }
+
+    spritesZeichnen();
+    kollisionPruefen();
 }
