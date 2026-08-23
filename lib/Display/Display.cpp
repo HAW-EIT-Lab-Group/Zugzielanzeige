@@ -45,8 +45,7 @@ PIN_A0 D49 (PL0)
 // Global for all Sections
 #define PIN_CLK 38
 #define PIN_STR 40
-#define PIN_EN_R 11
-#define PIN_EN_G 12
+#define PIN_EN 51
 
 void Display::init(){
     // GPIO
@@ -58,13 +57,13 @@ void Display::init(){
 
     pinModeFast(PIN_CLK, OUTPUT);
     pinModeFast(PIN_STR, OUTPUT);
-    pinModeFast(PIN_EN_R, OUTPUT);
-    pinModeFast(PIN_EN_G, OUTPUT);
+    pinModeFast(PIN_EN, OUTPUT);
+    Display::enable(0); // turn display on
 }
 
 // Set whole Diplay to the values from bitmap
 void Display::refresh(){
-    Display::enable(0,0); // turn display on
+    Display::enable(0); // turn display on
     for (int y = 0; y<HEIGHT_SECTION; y++) {
         uint8_t yfix;
         if(y == 15) yfix = 0;
@@ -73,6 +72,7 @@ void Display::refresh(){
         //Row selection
         PORTL = (PORTL & 0xf0) | (0x0f & y); // clear bits, copy masked y into register
 
+        
         for(int x = 0; x<WIDTH;x++){
             PORTA = Graphics::bitmap[x][yfix];
             digitalWriteFast(PIN_CLK, true);
@@ -84,12 +84,11 @@ void Display::refresh(){
         digitalWriteFast(PIN_STR, false);
 
     }
-    Display::enable(1,1); // turn off while calculating other things, prevents last line from looking brighter
+    Display::enable(1); // turn off while calculating other things, prevents last line from looking brighter
 }
 
 // enable(red,green), active LOW -> 1 = off, 0 = on
 // example: enable(0,1) -> red on, green off
-void Display::enable(uint8_t r,uint8_t g){
-    digitalWriteFast(PIN_EN_R,r);
-    digitalWriteFast(PIN_EN_G,g);
+void Display::enable(uint8_t en){
+    digitalWriteFast(PIN_EN,en);
 }

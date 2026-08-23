@@ -343,7 +343,7 @@ static const uint8_t (*pacmanIconFuer(Richtung r))[SPRITE_SIZE]
 // Platzhalter-Nullen im Originalbild
 static const uint8_t ziffernFont[10][HUD_DIGIT_H] PROGMEM = {
     {0b011, 0b101, 0b101, 0b101, 0b110}, // 0
-    {0b001, 0b011, 0b001, 0b001, 0b111}, // 1
+    {0b010, 0b110, 0b010, 0b010, 0b111}, // 1
     {0b110, 0b001, 0b010, 0b100, 0b111}, // 2
     {0b110, 0b001, 0b010, 0b001, 0b110}, // 3
     {0b101, 0b101, 0b111, 0b001, 0b001}, // 4
@@ -1494,33 +1494,78 @@ static void tasteVerarbeiten(char c)
 
 static void controllerVerarbeiten()
 {
+    static bool key_pressed = false;
     snespad.poll();
-        // Start- und Game-Over-Bildschirm reagieren auf jede Taste
-    if (spielStatus == STARTBILDSCHIRM) { spielStarten(); return; }
+    // D-Pad (Steuerkreuz)
+    if (snespad.directionUp) {
+        gewuenschteRichtung = OBEN;
+        //Serial.println("D-Pad Up is pressed.");
+        key_pressed = true;
+    }
+    else if (snespad.directionDown) {
+        gewuenschteRichtung = UNTEN;
+        //Serial.println("D-Pad Down is pressed.");
+        key_pressed = true;
+    }
+    else if (snespad.directionLeft) {
+        gewuenschteRichtung = LINKS;
+        //Serial.println("D-Pad Left is pressed.");
+        key_pressed = true;
+    }
+    else if (snespad.directionRight) {
+        gewuenschteRichtung = RECHTS;
+        //Serial.println("D-Pad Right is pressed.");
+        key_pressed = true;
+    }
+    
+    // Aktionstasten
+    else if (snespad.buttonA) {
+        Serial.println("Button A is pressed.");
+        key_pressed = true;
+    }
+    else if (snespad.buttonB) {
+        //Serial.println("Button B is pressed.");
+        key_pressed = true;
+    }
+    else if (snespad.buttonX) {
+        //Serial.println("Button X is pressed.");
+        key_pressed = true;
+    }
+    else if (snespad.buttonY) {
+        //Serial.println("Button Y is pressed.");
+        key_pressed = true;
+    }
 
-    if (spielStatus == GAMEOVER)
+    // Schultertasten
+    else if (snespad.buttonL) {
+        //Serial.println("Button L is pressed.");
+        key_pressed = true;
+    }
+    else if (snespad.buttonR) {
+        //Serial.println("Button R is pressed.");
+        key_pressed = true;
+    }
+
+    // Start/Select
+    else if (snespad.buttonStart) {
+        //Serial.println("Button Start is pressed.");
+        key_pressed = true;
+    }
+    else if (snespad.buttonSelect) {
+        //Serial.println("Button Select is pressed.");
+        key_pressed = true;
+    }
+
+
+    // Start- und Game-Over-Bildschirm reagieren auf jede Taste
+    if (spielStatus == STARTBILDSCHIRM && key_pressed) { spielStarten(); return; }
+
+    if (spielStatus == GAMEOVER && key_pressed)
     {
         // Eingabe wird erst nach einer Sekunde angenommen, damit ein
         // Tastendruck aus dem laufenden Spiel nicht sofort neu startet
         if (millis() - todZeit >= GAMEOVER_EINGABE_MS) spielStarten();
         return;
-    }
-
-        // D-Pad (Steuerkreuz)
-    if (snespad.directionUp) {
-        gewuenschteRichtung = OBEN;
-    }
-
-    if (snespad.directionDown) {
-       gewuenschteRichtung = UNTEN;
-    }
-
-    if (snespad.directionLeft) {
-        gewuenschteRichtung = LINKS;
-    }
-
-    if (snespad.directionRight) {
-        gewuenschteRichtung = RECHTS;
     }
 
 }
