@@ -4,10 +4,18 @@
 #include "Graphics.h"
 #include "config.h"
 #include "MazeData.h"
+#include "SNESpad.h"
 
-// Steuerung: über Serial (9600 Baud) mit W/A/S/D, Neustart nach Sieg/Niederlage mit R.
+
+
+enum Input{TASTATUR, CONTROLLER};
+#define EINGABEMODUS CONTROLLER
+
+// Steuerung bei EINGABEMODUS TASTATUR: über Serial (9600 Baud) mit W/A/S/D, Neustart nach Sieg/Niederlage mit R.
 // Ein Terminal ohne Zeilenpuffer (z.B. "pio device monitor" oder PuTTY) reagiert
 // sofort auf Tastendruck; die Arduino-IDE-Konsole sendet erst nach Enter.
+//
+// Steuerung bei EINGABEMODUS CONTROLLER: ...
 //
 // Das Labyrinth ist nicht mehr generiert, sondern kommt direkt aus dem
 // selbst gerenderten bild.png (siehe MazeData.h): Graphics::loadImage()
@@ -15,6 +23,20 @@
 // rechts, Wände in der Mitte). Punkte, Pacman und Geist werden zur Laufzeit
 // nur innerhalb des Labyrinth-Bereichs [MAZE_X0,MAZE_X1] gezeichnet/bewegt -
 // die Wanddaten liegen im Flash (PROGMEM), nicht im SRAM.
+
+
+
+//SNES Controller: Pin-Belegung
+#define CLOCK 5
+#define LATCH 6
+#define DATA0 7
+#define DATA1 -1 // optional (required for super multitap, scope, xband keyboard, etc)
+#define IOSEL -1 //
+
+SNESpad snespad(CLOCK, LATCH, DATA0, DATA1, IOSEL);
+
+
+
 
 // Das Labyrinth ist auf einem 9px-Raster gezeichnet (8px Gang + 1px Wand).
 // Basis-Offset 1/1 landet auf allen 14x7 Rasterpunkten (per Skript
@@ -903,7 +925,7 @@ static void startbildschirmZeichnen()
 static void gameoverBildschirmZeichnen()
 {
     Graphics::clear();
-    zeichneTextZentriert(20, "GAMEOVER", RED);
+    zeichneTextZentriert(20, "GAME OVER", RED);
 }
 
 // Leerer Bildschirm mit grüner Meldung, mittig ausgerichtet
@@ -1470,10 +1492,54 @@ static void tasteVerarbeiten(char c)
     }
 }
 
+static void controllerVerarbeiten()
+{
+    snespad.poll();
+        // Start- und Game-Over-Bildschirm reagieren auf jede Taste
+    if (spielStatus == STARTBILDSCHIRM) { spielStarten(); return; }
+
+    if (spielStatus == GAMEOVER)
+    {
+        // Eingabe wird erst nach einer Sekunde angenommen, damit ein
+        // Tastendruck aus dem laufenden Spiel nicht sofort neu startet
+        if (millis() - todZeit >= GAMEOVER_EINGABE_MS) spielStarten();
+        return;
+    }
+
+        // D-Pad (Steuerkreuz)
+    if (snespad.directionUp) {
+        gewuenschteRichtung = OBEN;
+    }
+
+    if (snespad.directionDown) {
+       gewuenschteRichtung = UNTEN;
+    }
+
+    if (snespad.directionLeft) {
+        gewuenschteRichtung = LINKS;
+    }
+
+    if (snespad.directionRight) {
+        gewuenschteRichtung = RECHTS;
+    }
+
+}
+
+static void controllerInit()
+{
+    snespad.begin(); // init lib and gpio
+    snespad.start(); // detect controller
+}
+
 static void eingabeLesen()
 {
-    while (Serial.available() > 0)
-        tasteVerarbeiten((char)Serial.read());
+    if(EINGABEMODUS == TASTATUR){
+        while (Serial.available() > 0)
+            tasteVerarbeiten((char)Serial.read());
+    }
+    if(EINGABEMODUS == CONTROLLER){
+        controllerVerarbeiten();
+    }
 }
 
 // Setzt nur die Figuren zurück (nach einem verlorenen Leben) - gegessene
@@ -1608,6 +1674,7 @@ void Game::init()
 {
     Serial.begin(9600);
 
+    if(EINGABEMODUS == CONTROLLER) controllerInit();
     // Zufallsgenerator anstoßen: ein offener Analogeingang liefert Rauschen.
     // Ohne das würde random() nach jedem Reset dieselbe Folge liefern und die
     // Energizer lägen jedes Mal an den gleichen Stellen.
