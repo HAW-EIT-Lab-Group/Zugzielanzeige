@@ -104,6 +104,8 @@ void setup() {
 
 // Main Loop
 void loop() {
+    //analogWrite(PIN_EN_R, 255);  // active LOW  -> 100% Brightness = 0
+    //analogWrite(PIN_EN_G, 255);  //             -> 0% Brightness = 255
     // Latch the whole display
         digitalWriteFast(PIN_STR, true);
         digitalWriteFast(PIN_STR, false);
@@ -116,7 +118,6 @@ void loop() {
         //Row selection
         PORTL = (PORTL & 0xf0) | (0x0f & y); // clear bits, copy masked y into register
 
-        delayMicroseconds(1500);
         for(int x = 0; x<WIDTH;x++){
             PORTA = bitmap[x][yfix];
             digitalWriteFast(PIN_CLK, true);
@@ -128,10 +129,9 @@ void loop() {
         digitalWriteFast(PIN_STR, false);
 
     }
+    //analogWrite(PIN_EN_R, 0);  // active LOW  -> 100% Brightness = 0
+    //analogWrite(PIN_EN_G, 0);  //             -> 0% Brightness = 255
     
-    analogWrite(PIN_EN_R, 255);  // active LOW  -> 100% Brightness = 0
-    analogWrite(PIN_EN_G, 255);  //             -> 0% Brightness = 255
-    delay(1);
-    analogWrite(PIN_EN_R, 0);  // active LOW  -> 100% Brightness = 0
-    analogWrite(PIN_EN_G, 0);  //             -> 0% Brightness = 255
+    delayMicroseconds(10);
+    
 }

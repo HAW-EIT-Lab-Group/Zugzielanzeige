@@ -63,7 +63,7 @@ void Display::init(){
 
 // Set whole Diplay to the values from bitmap
 void Display::refresh(){
-    Display::enable(0); // turn display on
+    //Display::enable(0); // turn display on
     for (int y = 0; y<HEIGHT_SECTION; y++) {
         uint8_t yfix;
         if(y == 15) yfix = 0;
@@ -84,7 +84,7 @@ void Display::refresh(){
         digitalWriteFast(PIN_STR, false);
 
     }
-    Display::enable(1); // turn off while calculating other things, prevents last line from looking brighter
+    //Display::enable(1); // turn off while calculating other things, prevents last line from looking brighter
 }
 
 // enable(red,green), active LOW -> 1 = off, 0 = on

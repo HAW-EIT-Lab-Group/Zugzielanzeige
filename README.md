@@ -145,40 +145,9 @@ Globale Signale:
     - wegen zu schnellem latchen?
     - index fehler in code?
 
-### 22.06.2026
-Todo:
-- sollen wir anwesenheit dokumentieren?
-
-- auf Steuereinheit/-system Festlegen
-    - Arduino\
-    +: einfach zu programmieren\
-    +: code für einzelne Frames läuft schon\
-    -: evtl. nicht schnell genug um parallel zur matrix noch ein spiel laufen zu lassen -> im code testen wie viel Zeit für berechnung vom Spiel bleibt
-
-    - Raspberry Pi\
-    +: mehrere Kerne -> paralleles rechnen\
-    +: schnellere cpu als arduino -> berechnen von spiel dauert weniger lange
-    -: 3,3V logik -> level shifter benötigt
-
-    - FPGA\
-    +: parallelität einfach umzusetzen
-    +: schnell
-    -: schwieriger zu programmieren (je nach spiel sogar ungeeignet)
-
-    - Seperate Controller für berechnung und darstellung\
-    +: sinnvoll wenn pc/laptop zum spiel-berechnen genutzt wird, dieser aber keine gpio pins hat
-    -: ergibt wenig sinn wenn man sowieso ein schnelleres System zum spiele berechnen nutzt, welches auch direkt die matrix ansteuern könnte
-
-- Auf spiel festlegen
-    - Snake
-    - Pong
-    - Reaktionsspiel
-    - Tetris
-    - Pacman
-    - Frogger
-    - Tank Battle
-    - Vier gewinnt
-    - Schiffe versenken
+### Todo
+- hitboxen sind zu groß
+- falsche pixel durch timing probleme
 
 
 

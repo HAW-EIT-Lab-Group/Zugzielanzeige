@@ -121,7 +121,7 @@ SNESpad snespad(CLOCK, LATCH, DATA0, DATA1, IOSEL);
 // erreichbar, nirgends bleibt die Box stecken.
 #define HITBOX_MIN -4
 #define HITBOX_MAX 3
-#define HITBOX_SIZE 8
+#define HITBOX_SIZE 6
 #define ANCHOR_X_MIN (MAZE_X0 - HITBOX_MIN)
 #define ANCHOR_X_MAX (MAZE_X1 - HITBOX_MAX)
 #define ANCHOR_Y_MIN (0 - HITBOX_MIN)
@@ -1058,8 +1058,8 @@ static void spielGewonnen()
     todZeit = millis();
     levelTextZeichnen();
 
-    Serial.print(F("Level geschafft! Jetzt Level "));
-    Serial.println(level);
+    //Serial.print(F("Level geschafft! Jetzt Level "));
+    //Serial.println(level);
 }
 
 // Ein Leben geht verloren. Sind noch welche übrig, startet nur die Runde neu
@@ -1073,7 +1073,7 @@ static void spielerStirbt()
     spielStatus = TOD_FREEZE;
     todZeit = millis();
     todFrame = 0;
-    Serial.println(F("Erwischt!"));
+    //Serial.println(F("Erwischt!"));
 }
 
 static void bewegePacman()
@@ -1129,13 +1129,13 @@ static void bewegePacman()
             {
                 bonusStufe = 1;
                 if (leben < LEBEN_MAX) { leben++; lebenZeichnen(); }
-                Serial.println(F("Extraleben (1000)!"));
+                //Serial.println(F("Extraleben (1000)!"));
             }
             if (bonusStufe < 2 && punkte >= BONUS_LEBEN_2)
             {
                 bonusStufe = 2;
                 if (leben < LEBEN_MAX) { leben++; lebenZeichnen(); }
-                Serial.println(F("Extraleben (3000)!"));
+                //Serial.println(F("Extraleben (3000)!"));
             }
 
             // Punkt-Zelle explizit neu zeichnen: das Pacman-Sprite ist wegen
@@ -1214,7 +1214,7 @@ static void energizerGefressen()
         if (naechstePixel(geister[i].x, geister[i].y, rueck, nx, ny)) geister[i].richtung = rueck;
     }
 
-    Serial.println(F("Energizer!"));
+    //Serial.println(F("Energizer!"));
 }
 
 // Fright-Effekt abgelaufen: Geister wieder normal, Multiplikator zurück
@@ -1451,8 +1451,8 @@ static void geistGefressen(uint8_t idx)
     spritesZeichnen();
     (void)g;
 
-    Serial.print(F("Geist gefressen: +"));
-    Serial.println(wert);
+    //Serial.print(F("Geist gefressen: +"));
+    //Serial.println(wert);
 }
 
 // Ein einzelner Schritt eines Geistes (ohne Zeichnen/Kollision - das macht
@@ -1703,7 +1703,7 @@ static void neuesSpiel()
 
     levelStarten();
 
-    Serial.println(F("Neues Spiel: WASD zum Bewegen"));
+    //Serial.println(F("Neues Spiel: WASD zum Bewegen"));
 }
 
 // Spiel aufbauen und erst nach BEREIT_MS loslaufen lassen - das Feld ist
@@ -1727,7 +1727,7 @@ void Game::init()
 
     spielStatus = STARTBILDSCHIRM;
     startbildschirmZeichnen();
-    Serial.println(F("Taste druecken zum Starten"));
+    //Serial.println(F("Taste druecken zum Starten"));
 }
 
 void Game::update()
@@ -1807,13 +1807,13 @@ void Game::update()
             todZeit = jetzt;
             gameoverPromptGezeichnet = false;
             gameoverBildschirmZeichnen();
-            Serial.print(F("Game Over! Punkte: "));
-            Serial.println(punkte);
+            //Serial.print(F("Game Over! Punkte: "));
+            //Serial.println(punkte);
         }
         else
         {
-            Serial.print(F("Leben verloren, uebrig: "));
-            Serial.println(leben);
+            //Serial.print(F("Leben verloren, uebrig: "));
+            //Serial.println(leben);
             rundeZuruecksetzen();
         }
         return;
