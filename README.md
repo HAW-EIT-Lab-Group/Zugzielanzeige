@@ -145,6 +145,12 @@ Globale Signale:
     - wegen zu schnellem latchen?
     - index fehler in code?
 
+### 09.09.2026
+- Code für SNESpad reduziert (Keyboard, Maus, NESpad auskommentiert)
+- digitalWriteFast implementiert
+- weitere Möglichkeiten zur Reduktion: delay_us(12) auf delay_us(6) reduzieren -> muss aber getestet werden, ob das damit funktioniert
+
+
 ### Todo
 - hitboxen sind zu groß
 - falsche pixel durch timing probleme
