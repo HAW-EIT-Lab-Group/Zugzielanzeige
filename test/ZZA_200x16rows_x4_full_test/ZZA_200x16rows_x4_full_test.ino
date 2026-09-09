@@ -104,6 +104,11 @@ void setup() {
 
 // Main Loop
 void loop() {
+    //analogWrite(PIN_EN_R, 255);  // active LOW  -> 100% Brightness = 0
+    //analogWrite(PIN_EN_G, 255);  //             -> 0% Brightness = 255
+    // Latch the whole display
+        digitalWriteFast(PIN_STR, true);
+        digitalWriteFast(PIN_STR, false);
     // Set whole Diplay like in the matrices defined
     for (int y = 0; y<HEIGHT_SECTION; y++) {
         uint8_t yfix;
@@ -122,12 +127,11 @@ void loop() {
         // Latch the whole display
         digitalWriteFast(PIN_STR, true);
         digitalWriteFast(PIN_STR, false);
+
     }
-    /*
-    analogWrite(PIN_EN_R, 255);  // active LOW  -> 100% Brightness = 0
-    analogWrite(PIN_EN_G, 255);  //             -> 0% Brightness = 255
-    delay(15);
-    analogWrite(PIN_EN_R, 0);  // active LOW  -> 100% Brightness = 0
-    analogWrite(PIN_EN_G, 0);  //             -> 0% Brightness = 255
-    */
+    //analogWrite(PIN_EN_R, 0);  // active LOW  -> 100% Brightness = 0
+    //analogWrite(PIN_EN_G, 0);  //             -> 0% Brightness = 255
+    
+    delayMicroseconds(10);
+    
 }

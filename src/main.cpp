@@ -1,23 +1,19 @@
 #include <Arduino.h>
 #include "Display.h"
 #include "Graphics.h"
+#include "Game.h"
 #include "config.h"
 
 void setup(){
     Display::init();
+    Game::init(); // startet Serial (9600 Baud) und zeichnet das Labyrinth
 
-    Graphics::loadImage();
     Display::refresh();
 }
 
 void loop(){
-    /* 
-    fill matrix here using 
-        - void Graphics::clear();
-        - void Graphics::fill(uint8_t color);
-        - void Graphics::drawPixel(uint8_t x, uint8_t y, uint8_t color);
-        - void Graphics::loadImage();
-    */
-   
+    // Game::update() blockiert nie (kein delay()), damit die Matrix
+    // ohne Flackern in der geforderten Rate weiterläuft (s. README)
+    Game::update();
     Display::refresh();
 }
