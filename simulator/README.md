@@ -43,6 +43,9 @@ Drei Stellen musst du selbst nachziehen – sie ersetzen ja gerade die Hardware:
 3. Kommt in `src/main.cpp` etwas Neues in `setup()`/`loop()` dazu, gehört es
    auch in `src/sim_main.cpp` (dort sind die beiden Aufrufe
    `Game::init()`/`Game::update()` nachgebaut).
+4. Änderst du in `Game.cpp` die Pins `CLOCK`/`LATCH`/`DATA0` des Controllers,
+   müssen `PAD_CLOCK`/`PAD_LATCH`/`PAD_DATA0` in `src/sim_arduino.cpp`
+   mitgezogen werden – sonst kommt keine Eingabe mehr an (s.u.).
 
 ## Voraussetzung
 
@@ -62,11 +65,11 @@ danach `zza_sim.exe` direkt starten.
 
 ## Bedienung
 
-**Spiel** (geht durch den echten `Serial.read()`-Pfad des Spiels):
+**Spiel** (geht durch den echten Eingabepfad des Spiels, s. „Controller“ unten):
 
 | Taste | Wirkung |
 |-------|---------|
-| `W` `A` `S` `D` | Pacman bewegen |
+| `W` `A` `S` `D` oder Pfeiltasten | Pacman bewegen |
 | `R` | Neustart nach Sieg/Niederlage |
 
 **Zeit** – das Spiel läuft an einer virtuellen Uhr, `millis()` liefert deren
@@ -101,6 +104,26 @@ Serial-Ausgaben des Spiels (`Serial.println(...)`) landen in der Konsole und in
 den letzten Zeilen des Infobereichs. Das Fenster ist frei skalierbar, die
 Pixelgröße passt sich an.
 
+## Controller: warum die Tastatur trotzdem ankommt
+
+`Game.cpp` steht auf `EINGABEMODUS CONTROLLER` und liest die Richtung über
+`snespad.poll()` – nicht über `Serial`. Eine Taste allein an `Serial` zu
+schicken bewirkt in diesem Modus also gar nichts.
+
+Damit die Tastatur trotzdem funktioniert, **ohne** dass am Spiel etwas geändert
+werden muss, baut `src/sim_arduino.cpp` das Schieberegister eines echten
+SNES-Pads nach – auf Pin-Ebene, unterhalb von `digitalWrite()`/`digitalRead()`:
+
+* `LATCH` 0→1 übernimmt den Tastenzustand ins Register,
+* jede steigende `CLOCK`-Flanke schiebt ein Bit heraus (von unten kommt 0 nach),
+* `DATA0` liefert das unterste Bit, aktiv LOW.
+
+`lib/Game/SNESpad.cpp` läuft dadurch unverändert mit und erkennt ein ganz
+normales Pad. `W`/`A`/`S`/`D` und die Pfeiltasten liegen auf dem Steuerkreuz,
+`R` auf Start. Weil das Spiel den *gehaltenen* Zustand abfragt, wertet der
+Simulator `WM_KEYDOWN`/`WM_KEYUP` aus statt einzelner Zeichen; an `Serial`
+gehen die Tasten zusätzlich weiter, damit `EINGABEMODUS TASTATUR` weiter geht.
+
 ## Ohne Fenster (Skripte, Regressionstests)
 
 ```bash
@@ -108,9 +131,15 @@ zza_sim.exe --ms 6000 --keys "ss" --dump lauf.txt
 ```
 
 Rechnet 6000 ms virtuelle Zeit in festen 5-ms-Schritten – also vollkommen
-deterministisch, unabhängig von der Rechnerleistung – schickt vorher die Tasten
-`ss` an das Spiel und schreibt die Bitmatrix als Text (`.` aus, `G` grün, `R`
-rot, `Y` gelb). Ohne `--dump` geht die Ausgabe nach stdout.
+deterministisch, unabhängig von der Rechnerleistung – und schreibt die Bitmatrix
+als Text (`.` aus, `G` grün, `R` rot, `Y` gelb). Ohne `--dump` geht die Ausgabe
+nach stdout.
+
+Die Tasten aus `--keys` werden **nacheinander je 300 ms gehalten** (`ss` also:
+0–300 ms runter, 300–600 ms runter, danach nichts mehr). Ein einzelner
+Tastendruck wie früher käme am Controller nicht an – er muss mindestens einen
+`snespad.poll()` überdauern. Für den Weg über `Serial` wird die Taste beim
+Anlegen zusätzlich einmal gesendet.
 
 Zwei solche Dumps mit `diff` zu vergleichen ist der schnellste Weg, um zu sehen,
 was eine Änderung am Spiel wirklich am Bild verändert hat.

@@ -90,10 +90,76 @@ long map(long x, long inMin, long inMax, long outMin, long outMax)
     return (x - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
 }
 
-// --- GPIO-Attrappen ---------------------------------------------------------
-void pinMode(uint8_t, uint8_t)      {}
-void digitalWrite(uint8_t, uint8_t) {}
-int  digitalRead(uint8_t)           { return 0; }
+// --- GPIO / emulierter SNES-Controller --------------------------------------
+// Das Spiel liest den Controller ueber SNESpad (lib/Game/SNESpad.cpp) bitweise
+// per GPIO. Damit die Tasten des Simulators durch genau diesen Pfad gehen - und
+// nicht an Game.cpp vorbei - wird hier das Schieberegister eines echten
+// SNES-Pads nachgebaut:
+//
+//   LATCH 0->1   uebernimmt den Tastenzustand ins Register
+//   CLOCK 0->1   schiebt ein Bit weiter, von unten kommt 0 (Masse) nach
+//   DATA0        liefert das unterste Registerbit, aktiv LOW (gedrueckt = 0)
+//
+// Nach den 16 Tastenbits liegt die Leitung auf 0 - daran erkennt SNESpad::read(),
+// dass ueberhaupt ein Controller steckt; ein offener Eingang bliebe durch den
+// Pull-up auf 1. Die Bitreihenfolge ist die der SNES_*-Konstanten aus SNESpad.h,
+// die oberen 4 Bits bleiben 1 (Geraete-ID 0 = normales Pad).
+//
+// WICHTIG: Die Pinnummern muessen zu den #defines CLOCK/LATCH/DATA0 am Anfang
+// von lib/Game/Game.cpp passen.
+namespace
+{
+    const uint8_t PAD_CLOCK = 5;
+    const uint8_t PAD_LATCH = 6;
+    const uint8_t PAD_DATA0 = 7;
+
+    uint16_t g_padTasten   = 0;      // SNES_*-Bits, 1 = gedrueckt
+    bool     g_padDa       = true;   // Controller angesteckt?
+    uint32_t g_padSchieber = 0;      // was gerade herausgeschoben wird
+    bool     g_padClock    = false;
+    bool     g_padLatch    = false;
+}
+
+void SimRuntime::padSetzen(uint16_t bits, bool gedrueckt)
+{
+    if (gedrueckt) g_padTasten |= bits;
+    else           g_padTasten &= (uint16_t)~bits;
+}
+
+void SimRuntime::padAlleLoesen()            { g_padTasten = 0; }
+uint16_t SimRuntime::padZustand()           { return g_padTasten; }
+void SimRuntime::padAnstecken(bool an)      { g_padDa = an; }
+
+void pinMode(uint8_t, uint8_t) {}
+
+void digitalWrite(uint8_t pin, uint8_t value)
+{
+    const bool hoch = (value != 0);
+
+    if (pin == PAD_LATCH)
+    {
+        // steigende Flanke: Tastenzustand uebernehmen (aktiv LOW)
+        if (hoch && !g_padLatch) g_padSchieber = (uint16_t)~g_padTasten;
+        g_padLatch = hoch;
+    }
+    else if (pin == PAD_CLOCK)
+    {
+        // steigende Flanke: ein Bit weiterschieben, von oben kommt 0 nach
+        if (hoch && !g_padClock) g_padSchieber >>= 1;
+        g_padClock = hoch;
+    }
+    // Schreiben auf DATA0 ist im Original nur das Einschalten des Pull-ups.
+}
+
+int digitalRead(uint8_t pin)
+{
+    if (pin == PAD_DATA0)
+    {
+        if (!g_padDa) return 1;                  // nichts angesteckt -> Pull-up
+        return (int)(g_padSchieber & 1);
+    }
+    return 1; // offene Eingaenge (DATA1/IOSEL sind -1) haengen am Pull-up
+}
 
 // ADC-Attrappe: eigener Rauschgenerator, unabhaengig von random(), damit ein
 // "randomSeed(analogRead(A0))" im Spiel nicht die Folge von random() stoert.

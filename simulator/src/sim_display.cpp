@@ -19,7 +19,7 @@ void Display::init() {}
 
 void Display::refresh() { g_refreshs++; }
 
-void Display::enable(uint8_t, uint8_t) {}
+void Display::enable(uint8_t) {}
 
 unsigned long SimDisplay::refreshZaehler() { return g_refreshs; }
 

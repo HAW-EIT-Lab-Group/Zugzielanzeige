@@ -29,6 +29,7 @@
 #include "Game.h"
 #include "Display.h"
 #include "MazeData.h"
+#include "SNESpad.h"
 
 #include "sim_runtime.h"
 #include "sim_display.h"
@@ -465,6 +466,37 @@ static void screenshotSpeichern()
 // ---------------------------------------------------------------------------
 // Eingaben
 // ---------------------------------------------------------------------------
+// Simulator-Taste -> Bit des emulierten SNES-Controllers (0 = keine Zuordnung).
+// Das Spiel steht auf EINGABEMODUS CONTROLLER, liest die Richtung also ueber
+// snespad.poll() und nicht ueber Serial. Damit W/A/S/D trotzdem wirken, wird
+// im Simulator ein Pad nachgebildet (siehe sim_arduino.cpp) - das Spiel selbst
+// bleibt unveraendert. R liegt auf Start, weil die Start- und Game-Over-
+// Bildschirme auf jede Controllertaste reagieren.
+static uint16_t padBitFuerZeichen(char c)
+{
+    switch (c)
+    {
+        case 'w': case 'W': return SNES_UP;
+        case 's': case 'S': return SNES_DOWN;
+        case 'a': case 'A': return SNES_LEFT;
+        case 'd': case 'D': return SNES_RIGHT;
+        case 'r': case 'R': return SNES_START;
+        default:            return 0;
+    }
+}
+
+static uint16_t padBitFuerVk(WPARAM vk)
+{
+    switch (vk)
+    {
+        case VK_UP:    return SNES_UP;
+        case VK_DOWN:  return SNES_DOWN;
+        case VK_LEFT:  return SNES_LEFT;
+        case VK_RIGHT: return SNES_RIGHT;
+        default:       return padBitFuerZeichen((char)vk);
+    }
+}
+
 static void zeitSchritt(unsigned long ms)
 {
     g_virtMs += ms;
@@ -509,6 +541,9 @@ static LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             return 0;
 
         case WM_KEYDOWN:
+            // Richtungstasten zusaetzlich am emulierten Controller halten -
+            // das Spiel liest bei EINGABEMODUS CONTROLLER nur diesen Weg
+            if (uint16_t bit = padBitFuerVk(wp)) SimRuntime::padSetzen(bit, true);
             switch (wp)
             {
                 case VK_ESCAPE: g_laeuft = false; DestroyWindow(hwnd); break;
@@ -523,6 +558,10 @@ static LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
                 case VK_SUBTRACT: g_tempo = g_tempo / 1.5 < 0.05 ? 0.05 : g_tempo / 1.5; break;
                 default: break;
             }
+            return 0;
+
+        case WM_KEYUP:
+            if (uint16_t bit = padBitFuerVk(wp)) SimRuntime::padSetzen(bit, false);
             return 0;
 
         case WM_MOUSEMOVE:
@@ -568,12 +607,39 @@ static int kopflosLaufen(unsigned long dauerMs, const char *tasten, const char *
     Game::init();
     Display::refresh();
 
+    // So lange gilt jede Taste aus --keys als gedrueckt. Ein Druck auf dem
+    // emulierten Controller muss mindestens einen snespad.poll() ueberdauern;
+    // ein einzelnes Zeichen wie bisher kaeme dort nie an.
+    const unsigned long TASTE_MS = 300;
+
     if (tasten)
-        for (const char *t = tasten; *t; t++) SimRuntime::tasteSenden(*t);
+        printf("[Sim] --keys \"%s\": je %lu ms gehalten\n", tasten, TASTE_MS);
+
+    const size_t tastenAnz  = tasten ? strlen(tasten) : 0;
+    size_t       letzteTaste = (size_t)-1;
 
     const unsigned long SCHRITT = 5; // ms je Iteration -> deterministisch
     for (unsigned long t = 0; t <= dauerMs; t += SCHRITT)
     {
+        // Die Tasten aus --keys werden nacheinander je TASTE_MS lang
+        // gehalten - einmal am emulierten Controller (EINGABEMODUS
+        // CONTROLLER) und einmal als Serial-Zeichen (EINGABEMODUS
+        // TASTATUR), damit der Lauf in beiden Modi dasselbe tut.
+        if (tastenAnz)
+        {
+            size_t i = t / TASTE_MS;
+            if (i != letzteTaste)
+            {
+                letzteTaste = i;
+                SimRuntime::padAlleLoesen();
+                if (i < tastenAnz)
+                {
+                    SimRuntime::padSetzen(padBitFuerZeichen(tasten[i]), true);
+                    SimRuntime::tasteSenden(tasten[i]);
+                }
+            }
+        }
+
         g_virtMs = t;
         SimRuntime::uhrSetzen(t);
         Game::update();

@@ -72,7 +72,7 @@ for /r "%GAME%\lib" %%f in (*.cpp) do call :quelleHinzu "%%f"
 echo [Build] Uebersetze...
 rem /MT bindet die C-Laufzeit fest ein: die fertige zza_sim.exe laeuft dann auf
 rem jedem Windows-Rechner, ohne dass das "Visual C++ Redistributable" noetig ist.
-cl /nologo /EHsc /O2 /W3 /std:c++17 /MT /D_CRT_SECURE_NO_WARNINGS ^
+cl /nologo /EHsc /O2 /W3 /std:c++17 /MT /D_CRT_SECURE_NO_WARNINGS /DARDUINO=10819 ^
    /wd4244 /wd4267 /wd4838 /wd4996 ^
    !INCLUDES! ^
    /Fo"%BUILD%\\" /Fd"%BUILD%\\" /Fe"%SIM%\zza_sim.exe" ^

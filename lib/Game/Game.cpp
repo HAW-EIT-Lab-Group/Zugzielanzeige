@@ -35,6 +35,9 @@ enum Input{TASTATUR, CONTROLLER};
 
 SNESpad snespad(CLOCK, LATCH, DATA0, DATA1, IOSEL);
 
+// Mindestabstand zwischen zwei Controllerabfragen (s. eingabeLesen())
+#define CONTROLLER_POLL_MS 10
+
 
 
 
@@ -1583,7 +1586,21 @@ static void eingabeLesen()
             tasteVerarbeiten((char)Serial.read());
     }
     if(EINGABEMODUS == CONTROLLER){
-        controllerVerarbeiten();
+        // Der Controller wird bewusst nicht in jeder loop()-Iteration
+        // abgefragt: ein snespad.poll() schiebt das Bitprotokoll mit festen
+        // Wartezeiten heraus und dauert dadurch gut 0,6 ms - gegenueber den
+        // rund 3 ms eines Display::refresh() ist das ein Fuenftel der Zeit,
+        // die dann nicht in die Matrix geht.
+        // Die gelesene Richtung wird ohnehin erst im Basistakt ausgewertet
+        // (BASIS_TICK_MS = 40 ms); CONTROLLER_POLL_MS liegt weit darunter,
+        // an Reaktion und Spielgefuehl aendert sich also nichts.
+        static unsigned long letzterPoll = 0;
+        unsigned long jetzt = millis();
+        if (jetzt - letzterPoll >= CONTROLLER_POLL_MS)
+        {
+            letzterPoll = jetzt;
+            controllerVerarbeiten();
+        }
     }
 }
 

@@ -30,6 +30,14 @@
 #include "Arduino.h"
 #endif
 
+// -1 in der Pin-Belegung heisst "nicht angeschlossen" (siehe DATA1/IOSEL in
+// Game.cpp). Als uint8_t kommt davon 255 an, und pinMode()/digitalWrite()/
+// digitalRead() greifen damit weit hinter das Ende der 70 Eintraege langen
+// Arduino-Pintabellen: der so gelesene "Port" ist irgendein Flash-Byte, und
+// geschrieben wird anschliessend in eine beliebige RAM-Adresse. Alle Zugriffe
+// auf solche Pins werden deshalb ausdruecklich abgefangen.
+#define SNES_PIN_NC 255
+
 SNESpad::SNESpad(int clock, int latch, int data0, int data1, int select) {
   latchPin = latch;
   clockPin = clock;
@@ -47,6 +55,7 @@ void custom_delay_us(unsigned int delay_value) {
 }
 
 void custom_write(uint8_t outPin, uint8_t dir) {
+  if (outPin == SNES_PIN_NC) return; // Pin nicht angeschlossen
 #ifdef ARDUINO
     digitalWrite(outPin, dir ? HIGH:LOW);
 #else
@@ -55,6 +64,7 @@ void custom_write(uint8_t outPin, uint8_t dir) {
 }
 
 uint8_t custom_read(uint8_t inPin) {
+  if (inPin == SNES_PIN_NC) return 1; // offener Eingang: Pull-up haelt HIGH
 #ifdef ARDUINO
     return digitalRead(inPin);
 #else
@@ -213,14 +223,15 @@ void SNESpad::poll() {
 void SNESpad::init() {
 #ifdef ARDUINO
   // Code specific to Arduino
-  pinMode(clockPin,  OUTPUT);
-  pinMode(latchPin, OUTPUT);
-  pinMode(data0Pin, INPUT);
-  pinMode(data1Pin, INPUT);
-  pinMode(iobitPin, OUTPUT);
+  // nicht angeschlossene Pins (-1 -> 255) auslassen, s. SNES_PIN_NC
+  if (clockPin != SNES_PIN_NC) pinMode(clockPin, OUTPUT);
+  if (latchPin != SNES_PIN_NC) pinMode(latchPin, OUTPUT);
+  if (data0Pin != SNES_PIN_NC) pinMode(data0Pin, INPUT);
+  if (data1Pin != SNES_PIN_NC) pinMode(data1Pin, INPUT);
+  if (iobitPin != SNES_PIN_NC) pinMode(iobitPin, OUTPUT);
 
-  digitalWrite(data0Pin, HIGH); // pull_up
-  digitalWrite(data1Pin, HIGH);
+  custom_write(data0Pin, 1); // pull_up
+  custom_write(data1Pin, 1);
 #else
   // Code specific to Pico SDK
   gpio_init(clockPin);
@@ -334,6 +345,7 @@ XbandKeyMapping SNESpad::getKeyFromScancode(uint8_t scancode, bool special) {
 
 bool SNESpad::setCapsLockLed(bool enabled) {
   capsLocked = enabled;
+  return capsLocked;
 }
 
 bool SNESpad::readKeyboard(bool readonlyID)
@@ -430,7 +442,11 @@ uint32_t SNESpad::read()
   }
 
   // check and read keyboard
-  bool isKeyboard = readKeyboard(readonlyID);
+  // Die Xband-Tastatur laesst sich nur ueber IOSEL anstossen. Ist der Pin nicht
+  // angeschlossen (IOSEL -1), kann readKeyboard() nie eine finden - die sechs
+  // zusaetzlichen Taktzyklen kosten dann nur Zeit (~0,25 ms je Abfrage) und
+  // bremsen Display::refresh() aus.
+  bool isKeyboard = (iobitPin != SNES_PIN_NC) && readKeyboard(readonlyID);
 
   dat = ~dat; // ctrlr buttons are active low, so invert bits
 

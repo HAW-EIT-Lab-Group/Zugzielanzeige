@@ -20,4 +20,17 @@ namespace SimRuntime
     // Serial-Ausgaben des Spiels (Serial.println(...)), 0 = aelteste
     int         logAnzahl();
     const char *logZeile(int i);
+
+    // --- emulierter SNES-Controller -------------------------------------
+    // Der Simulator baut das Schieberegister eines echten SNES-Pads nach
+    // (siehe sim_arduino.cpp). Die Tastatur des Simulators laeuft damit durch
+    // genau den snespad.poll()-Pfad, den auch die Hardware nimmt - Game.cpp
+    // bleibt unveraendert, auch bei EINGABEMODUS CONTROLLER.
+    // bits sind die SNES_*-Konstanten aus SNESpad.h.
+    void     padSetzen(uint16_t bits, bool gedrueckt);
+    void     padAlleLoesen();
+    uint16_t padZustand();
+
+    // Controller an- oder abstecken (Standard: angesteckt)
+    void padAnstecken(bool angesteckt);
 }
