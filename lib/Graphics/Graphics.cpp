@@ -28,7 +28,8 @@ void Graphics::drawPixel(uint8_t x, uint8_t y64, uint8_t color){
     bitmap[x][y16] = (bitmap[x][y16] & ~(0b11<<yshift)) | color<<yshift; // copy row, delete pixel, insert new pixel     
 }
 
-// fill rectangle with color
+// original: fill rectangle with color
+/* 
 void Graphics::drawRect(uint8_t x1, uint8_t y1,uint8_t x2, uint8_t y2, uint8_t color){
     for(int x = 0;x<WIDTH;x++){
         for(int y = 0;y<HEIGHT_ALL;y++){
@@ -38,6 +39,139 @@ void Graphics::drawRect(uint8_t x1, uint8_t y1,uint8_t x2, uint8_t y2, uint8_t c
         }
     }
 }
+ */
+
+// ChatGpt1: better fill rectangle with color
+ 
+void Graphics::drawRect(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, uint8_t color){
+    // koordinaten normalisieren
+    if(x1 > x2){
+        uint8_t t = x1;
+        x1 = x2;
+        x2 = t;
+    }
+
+    if(y1 > y2){
+        uint8_t t = y1;
+        y1 = y2;
+        y2 = t;
+    }
+
+    for(uint8_t x = x1; x <= x2; ++x){
+        for(uint8_t y=y1;y<=y2;++y){
+            uint8_t section = y / HEIGHT_SECTION;
+            uint8_t y16 = y % HEIGHT_SECTION;
+
+            uint8_t yshift = ((NR_OF_SECTIONS - 1) - section) * 2;
+            uint8_t mask   = 0b11 << yshift;
+
+            bitmap[x][y16] = (bitmap[x][y16] & ~mask) | (color << yshift);
+        }
+    }
+}
+
+
+// ChatGpt2: better fill rectangle with color (theoretisch noch schneller, da mehrere reihen zur zeit processed werden)
+/* 
+void Graphics::drawRect(uint8_t x1, uint8_t y1,
+                        uint8_t x2, uint8_t y2,
+                        uint8_t color)
+{
+    if (x1 > x2) {
+        uint8_t t = x1;
+        x1 = x2;
+        x2 = t;
+    }
+
+    if (y1 > y2) {
+        uint8_t t = y1;
+        y1 = y2;
+        y2 = t;
+    }
+
+    for (uint8_t x = x1; x <= x2; ++x) {
+
+        uint8_t y = y1;
+
+        while (y <= y2) {
+            uint8_t section = y / HEIGHT_SECTION;
+
+            // Last row belonging to this 16-pixel section
+            uint8_t sectionEnd = ((section + 1) * HEIGHT_SECTION) - 1;
+
+            if (sectionEnd > y2)
+                sectionEnd = y2;
+
+            uint8_t y16 = y % HEIGHT_SECTION;
+
+            uint8_t yshift = ((NR_OF_SECTIONS - 1) - section) * 2;
+
+            uint8_t mask = 0b11 << yshift;
+            uint8_t value = color << yshift;
+
+            // Fill all rows in this section
+            while (y <= sectionEnd) {
+                bitmap[x][y16] = (bitmap[x][y16] & ~mask) | value;
+                ++y;
+                ++y16;
+            }
+        }
+    }
+}
+ */
+
+//ChatGpt3: noch schneller (laut ChatGpt)
+/* 
+void Graphics::drawRect(uint8_t x1, uint8_t y1,
+                        uint8_t x2, uint8_t y2,
+                        uint8_t color)
+{
+    if (x1 > x2) {
+        uint8_t t = x1;
+        x1 = x2;
+        x2 = t;
+    }
+
+    if (y1 > y2) {
+        uint8_t t = y1;
+        y1 = y2;
+        y2 = t;
+    }
+
+    for (uint8_t x = x1; x <= x2; ++x) {
+
+        // Process each 16-pixel section touched by the rectangle
+        uint8_t firstSection = y1 / HEIGHT_SECTION;
+        uint8_t lastSection  = y2 / HEIGHT_SECTION;
+
+        for (uint8_t section = firstSection;
+             section <= lastSection;
+             ++section)
+        {
+            uint8_t firstY = (section == firstSection)
+                           ? y1 % HEIGHT_SECTION
+                           : 0;
+
+            uint8_t lastY = (section == lastSection)
+                          ? y2 % HEIGHT_SECTION
+                          : HEIGHT_SECTION - 1;
+
+            uint8_t shift =
+                ((NR_OF_SECTIONS - 1) - section) * 2;
+
+            uint8_t mask = 0b11 << shift;
+            uint8_t value = color << shift;
+
+            for (uint8_t y16 = firstY; y16 <= lastY; ++y16) {
+                bitmap[x][y16] =
+                    (bitmap[x][y16] & ~mask) | value;
+            }
+        }
+    }
+}
+ */
+
+
 
 // copy image stored in imageData.h to matrix
 void Graphics::loadImage(){
