@@ -41,6 +41,22 @@ void Graphics::drawRect(uint8_t x1, uint8_t y1,uint8_t x2, uint8_t y2, uint8_t c
 }
  */
 
+
+ /*
+ Prompt:
+
+I have the following code to set bits in a larger matrix. The matrix has a weird but mandatory construction. uint8_t bitmap[200][16] is storing data for leds of a 64x200 led matrix. The matrix is split into 4 sections with 16 pixels each. Each pixel has two leds with the colors red and green.
+
+Each byte of bitmap holds the data for one pixel in each section, eg. bitmap[0][0] has 8 bit:
+Bit 7 hold data for the red led of pixel 0,0 of section 0
+Bit 6 hold data for the green led of pixel 0,0 of section 0
+Bit 5 holds data for the red led of pixel 0,0 of section 1
+bit 4 hold data for the green led of pixel 0,0 of section 1
+and so on.
+
+I want you to rewrite the drawRect(x1,y1,x2,y1,color) function to allow for faster drawing without repeatedly calling drawPixel().
+ 
+*/
 // ChatGpt1: better fill rectangle with color
  
 void Graphics::drawRect(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, uint8_t color){
