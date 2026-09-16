@@ -1,46 +1,44 @@
+___
+### Game
+calculates Pacman game
+___
+### SNESpad
+provides functions for reading input from SNESpad controllers to be used in "Game"
+___
+### Graphics
+Provides basic functions to write to a bitmap readable by the "display" lib.  
+Important: Changing the bitmat doesnt directly affect the display, for the changes to be displayed call "display::refresh()".  
 
-This directory is intended for project specific (private) libraries.
-PlatformIO will compile them to static libraries and link into the executable file.
+(see [Graphics.h](Graphics/Graphics.h) for more details on the functions)
 
-The source code of each library should be placed in a separate directory
-("lib/your_library_name/[Code]").
+**clear()**:  
+clears whole bitmap 
 
-For example, see the structure of the following example libraries `Foo` and `Bar`:
+**fill(color)**:  
+fill whole bitmap with a color 
 
-|--lib
-|  |
-|  |--Bar
-|  |  |--docs
-|  |  |--examples
-|  |  |--src
-|  |     |- Bar.c
-|  |     |- Bar.h
-|  |  |- library.json (optional. for custom build options, etc) https://docs.platformio.org/page/librarymanager/config.html
-|  |
-|  |--Foo
-|  |  |- Foo.c
-|  |  |- Foo.h
-|  |
-|  |- README --> THIS FILE
-|
-|- platformio.ini
-|--src
-   |- main.c
+**drawPixel(x,y,color)**:  
+set single pixel to one color
 
-Example contents of `src/main.c` using Foo and Bar:
-```
-#include <Foo.h>
-#include <Bar.h>
+**drawRect(x1,y1,x2,y2,color)**:  
+draw rectangle of a certain color, calls "drawPixel()" and is therefore not more efficient
 
-int main (void)
-{
-  ...
-}
+**loadImage()**:  
+loads image stored in [imageData.h](../include/imageData.h) into the bitmap.   
+To generate an imageData.h file use [imageToBitmap.py](../src/imageToBitmap.py) 
+>image_to_bitmap_cpp("\<input filename>.png", "\<output filename>")  
 
-```
+(details in .py file)
 
-The PlatformIO Library Dependency Finder will find automatically dependent
-libraries by scanning project source files.
+___
+### Display
+controls pins on arduino to write to the Display.
 
-More information about PlatformIO Library Dependency Finder
-- https://docs.platformio.org/page/librarymanager/ldf.html
+**init()**:  
+configures Arduino pins, for details on the pins see [Display.cpp](Display/Display.cpp)
+
+**refresh()**:  
+Sets physical pins on the arduino according to bitmap provided by "graphics" lib
+
+**enable(en)**:  
+Turns whole display on/off
