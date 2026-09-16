@@ -242,6 +242,7 @@ class SNESpad {
   public:
     int8_t type = SNES_PAD_NONE; 
 
+    // ---- Mouse support disabled (unused) ----
     uint16_t mouseX        = 0;
     uint16_t mouseY        = 0;
 
@@ -259,6 +260,7 @@ class SNESpad {
     bool directionLeft   = false;
     bool directionRight  = false;
 
+    // ---- Keyboard support disabled (unused) ----
     uint8_t scancodes[16] = {0};
     uint8_t scancodes_len = 0;
 
@@ -283,201 +285,201 @@ class SNESpad {
     uint32_t _lastRead;
     bool capsLocked = false; // xband keyboard capslock state
 
-    XbandKeyMapping keyMapping[16][10] = {
-        // 0xh, 1xh, 2xh, 3xh, 4xh, 5xh, 6xh, 7xh, 8xh, 9xh
-        {
-          {"unused", 0},
-          {"unused", 0},
-          {"unused", 0},
-          {"unused", 0},
-          {"unused", 0},
-          {"unused", 0},
-          {"unused", 0},
-          {"NUM-0", '0'},
-          {"OpenX", KEY_LEFT_GUI, 1},
-          {"90h", 0}
-        }, // x0h
-        {
-          {"F1", KEY_F1},
-          {"Alt", KEY_LEFT_ALT, 1},
-          {"C", 'c'},
-          {"N", 'n'},
-          {",<", ','},
-          {"unused", 0},
-          {"unused", 0},
-          {"NUM-.", '.'},
-          {"ClosedX", KEY_RIGHT_GUI, 1},
-          {"91h", 0}
-        }, // x1h
-        {
-          {"F2", KEY_F2},
-          {"LShft", KEY_LEFT_SHIFT, 1},
-          {"X", 'x'},
-          {"B", 'b'},
-          {"K", 'k'},
-          {"\",", '\''},
-          {"unused", 0},
-          {"NUM-2", '2'},
-          {"unused", 0},
-          {"92h", 0}
-        }, // x2h
-        {
-          {"F3", KEY_F3},
-          {"unused", 0},
-          {"D", 'd'},
-          {"H", 'h'},
-          {"I", 'i'},
-          {"unused", 0},
-          {"unused", 0},
-          {"NUM-5", '5'},
-          {"unused", 0},
-          {"93h", 0}
-        }, // x3h
-        {
-          {"F4", KEY_F4},
-          {"LCtl", KEY_LEFT_CTRL, 1},
-          {"E", 'e'},
-          {"G", 'g'},
-          {"O", 'o'},
-          {"[{", '['},
-          {"unused", 0},
-          {"NUM-6", '6'},
-          {"NUM-SUB", 0},
-          {"94h", 0}
-        }, // x4h
-        {
-          {"F5", KEY_F5},
-          {"Q", 'q'},
-          {"4$", '4'},
-          {"Y", 'y'},
-          {"0)", '0'},
-          {"=+", '='},
-          {"unused", 0},
-          {"NUM-8", '8'},
-          {"unused", 0},
-          {"95h", 0}
-        }, // x5h
-        {
-          {"F6", KEY_F6},
-          {"1!", '1'},
-          {"3#", '3'},
-          {"6^", '6'},
-          {"9(", '9'},
-          {"unused", 0},
-          {"BACKSPACE", KEY_BACKSPACE},
-          {"ESC", KEY_ESC},
-          {"JOY-A", 0},
-          {"96h", 0}
-        }, // x6h
-        {
-          {"F7", KEY_F7},
-          {"unused", 0},
-          {"unused", 0},
-          {"unused", 0},
-          {"unused", 0},
-          {"unused", 0},
-          {"unused", 0},
-          {"NUM-DIV", 0},
-          {"JOY-B", 0},
-          {"97h", 0}
-        }, // x7h
-        {
-          {"F8", KEY_F8},
-          {"unused", 0},
-          {"unused", 0},
-          {"unused", 0},
-          {"unused", 0},
-          {"CAPS", KEY_CAPS_LOCK, 1},
-          {"unused", 0},
-          {"unused", 0},
-          {"JOY-X", 0},
-          {"98h", 0}
-        }, // x8h
-        {
-          {"F9", KEY_F9},
-          {"unused", 0},
-          {"SPACE", ' '},
-          {"unused", 0},
-          {".>", '.'},
-          {"RShft", KEY_RIGHT_SHIFT, 1},
-          {"NUM-1", '1'},
-          {"NUM-RET", 0},
-          {"JOY-Y", 0},
-          {"99h", 0}
-        }, // x9h
-        {
-          {"F10", KEY_F10},
-          {"Z", 'z'},
-          {"V", 'v'},
-          {"M", 'm'},
-          {"/?", '/'},
-          {"ENTER", KEY_RETURN},
-          {"unused", 0},
-          {"NUM-3", '3'},
-          {"JOY-L", 0},
-          {"9Ah", 0}
-        }, // xAh
-        {
-          {"F11", KEY_F11},
-          {"S", 's'},
-          {"F", 'f'},
-          {"J", 'j'},
-          {"L", 'l'},
-          {"]}", ']'},
-          {"NUM-4", '4'},
-          {"unused", 0},
-          {"JOY-R", 0},
-          {"9Bh", 0}
-        }, // xBh
-        {
-          {"F12", KEY_F12},
-          {"A", 'a'},
-          {"T", 't'},
-          {"U", 'u'},
-          {";:", ';'},
-          {"unused", 0},
-          {"NUM-7", '7'},
-          {"NUM-ADD", '+'},
-          {"SELECT", 0},
-          {"9Ch", 0}
-        }, // xCh
-        {
-          {"Switch", KEY_TAB},
-          {"W", 'w'},
-          {"R", 'r'},
-          {"7&", '7'},
-          {"P", 'p'},
-          {"\\", '\\'},
-          {"unused", 0},
-          {"NUM-9", '9'},
-          {"START", 0},
-          {"9Dh", 0}
-        }, // xDh
-        {
-          {"`~", '`'},
-          {"2@", '2'},
-          {"5%", '5'},
-          {"8*", '8'},
-          {"-_", '-'},
-          {"unused", 0},
-          {"unused", 0},
-          {"NUM-MUL", '*'},
-          {"8Eh", 0},
-          {"unused", 0},
-        }, // xEh
-        {
-          {"unused", 0},
-          {"unused", 0},
-          {"unused", 0},
-          {"unused", 0},
-          {"unused", 0},
-          {"unused", 0},
-          {"unused", 0},
-          {"unused", 0},
-          {"8Fh", 0},
-          {"unused", 0},
-        }, // xFh
-    };
+    // XbandKeyMapping keyMapping[16][10] = {
+    //     // 0xh, 1xh, 2xh, 3xh, 4xh, 5xh, 6xh, 7xh, 8xh, 9xh
+    //     {
+    //       {"unused", 0},
+    //       {"unused", 0},
+    //       {"unused", 0},
+    //       {"unused", 0},
+    //       {"unused", 0},
+    //       {"unused", 0},
+    //       {"unused", 0},
+    //       {"NUM-0", '0'},
+    //       {"OpenX", KEY_LEFT_GUI, 1},
+    //       {"90h", 0}
+    //     }, // x0h
+    //     {
+    //       {"F1", KEY_F1},
+    //       {"Alt", KEY_LEFT_ALT, 1},
+    //       {"C", 'c'},
+    //       {"N", 'n'},
+    //       {",<", ','},
+    //       {"unused", 0},
+    //       {"unused", 0},
+    //       {"NUM-.", '.'},
+    //       {"ClosedX", KEY_RIGHT_GUI, 1},
+    //       {"91h", 0}
+    //     }, // x1h
+    //     {
+    //       {"F2", KEY_F2},
+    //       {"LShft", KEY_LEFT_SHIFT, 1},
+    //       {"X", 'x'},
+    //       {"B", 'b'},
+    //       {"K", 'k'},
+    //       {"\",", '\''},
+    //       {"unused", 0},
+    //       {"NUM-2", '2'},
+    //       {"unused", 0},
+    //       {"92h", 0}
+    //     }, // x2h
+    //     {
+    //       {"F3", KEY_F3},
+    //       {"unused", 0},
+    //       {"D", 'd'},
+    //       {"H", 'h'},
+    //       {"I", 'i'},
+    //       {"unused", 0},
+    //       {"unused", 0},
+    //       {"NUM-5", '5'},
+    //       {"unused", 0},
+    //       {"93h", 0}
+    //     }, // x3h
+    //     {
+    //       {"F4", KEY_F4},
+    //       {"LCtl", KEY_LEFT_CTRL, 1},
+    //       {"E", 'e'},
+    //       {"G", 'g'},
+    //       {"O", 'o'},
+    //       {"[{", '['},
+    //       {"unused", 0},
+    //       {"NUM-6", '6'},
+    //       {"NUM-SUB", 0},
+    //       {"94h", 0}
+    //     }, // x4h
+    //     {
+    //       {"F5", KEY_F5},
+    //       {"Q", 'q'},
+    //       {"4$", '4'},
+    //       {"Y", 'y'},
+    //       {"0)", '0'},
+    //       {"=+", '='},
+    //       {"unused", 0},
+    //       {"NUM-8", '8'},
+    //       {"unused", 0},
+    //       {"95h", 0}
+    //     }, // x5h
+    //     {
+    //       {"F6", KEY_F6},
+    //       {"1!", '1'},
+    //       {"3#", '3'},
+    //       {"6^", '6'},
+    //       {"9(", '9'},
+    //       {"unused", 0},
+    //       {"BACKSPACE", KEY_BACKSPACE},
+    //       {"ESC", KEY_ESC},
+    //       {"JOY-A", 0},
+    //       {"96h", 0}
+    //     }, // x6h
+    //     {
+    //       {"F7", KEY_F7},
+    //       {"unused", 0},
+    //       {"unused", 0},
+    //       {"unused", 0},
+    //       {"unused", 0},
+    //       {"unused", 0},
+    //       {"unused", 0},
+    //       {"NUM-DIV", 0},
+    //       {"JOY-B", 0},
+    //       {"97h", 0}
+    //     }, // x7h
+    //     {
+    //       {"F8", KEY_F8},
+    //       {"unused", 0},
+    //       {"unused", 0},
+    //       {"unused", 0},
+    //       {"unused", 0},
+    //       {"CAPS", KEY_CAPS_LOCK, 1},
+    //       {"unused", 0},
+    //       {"unused", 0},
+    //       {"JOY-X", 0},
+    //       {"98h", 0}
+    //     }, // x8h
+    //     {
+    //       {"F9", KEY_F9},
+    //       {"unused", 0},
+    //       {"SPACE", ' '},
+    //       {"unused", 0},
+    //       {".>", '.'},
+    //       {"RShft", KEY_RIGHT_SHIFT, 1},
+    //       {"NUM-1", '1'},
+    //       {"NUM-RET", 0},
+    //       {"JOY-Y", 0},
+    //       {"99h", 0}
+    //     }, // x9h
+    //     {
+    //       {"F10", KEY_F10},
+    //       {"Z", 'z'},
+    //       {"V", 'v'},
+    //       {"M", 'm'},
+    //       {"/?", '/'},
+    //       {"ENTER", KEY_RETURN},
+    //       {"unused", 0},
+    //       {"NUM-3", '3'},
+    //       {"JOY-L", 0},
+    //       {"9Ah", 0}
+    //     }, // xAh
+    //     {
+    //       {"F11", KEY_F11},
+    //       {"S", 's'},
+    //       {"F", 'f'},
+    //       {"J", 'j'},
+    //       {"L", 'l'},
+    //       {"]}", ']'},
+    //       {"NUM-4", '4'},
+    //       {"unused", 0},
+    //       {"JOY-R", 0},
+    //       {"9Bh", 0}
+    //     }, // xBh
+    //     {
+    //       {"F12", KEY_F12},
+    //       {"A", 'a'},
+    //       {"T", 't'},
+    //       {"U", 'u'},
+    //       {";:", ';'},
+    //       {"unused", 0},
+    //       {"NUM-7", '7'},
+    //       {"NUM-ADD", '+'},
+    //       {"SELECT", 0},
+    //       {"9Ch", 0}
+    //     }, // xCh
+    //     {
+    //       {"Switch", KEY_TAB},
+    //       {"W", 'w'},
+    //       {"R", 'r'},
+    //       {"7&", '7'},
+    //       {"P", 'p'},
+    //       {"\\", '\\'},
+    //       {"unused", 0},
+    //       {"NUM-9", '9'},
+    //       {"START", 0},
+    //       {"9Dh", 0}
+    //     }, // xDh
+    //     {
+    //       {"`~", '`'},
+    //       {"2@", '2'},
+    //       {"5%", '5'},
+    //       {"8*", '8'},
+    //       {"-_", '-'},
+    //       {"unused", 0},
+    //       {"unused", 0},
+    //       {"NUM-MUL", '*'},
+    //       {"8Eh", 0},
+    //       {"unused", 0},
+    //     }, // xEh
+    //     {
+    //       {"unused", 0},
+    //       {"unused", 0},
+    //       {"unused", 0},
+    //       {"unused", 0},
+    //       {"unused", 0},
+    //       {"unused", 0},
+    //       {"unused", 0},
+    //       {"unused", 0},
+    //       {"8Fh", 0},
+    //       {"unused", 0},
+    //     }, // xFh
+    // };
 
     void init();
     void latch();

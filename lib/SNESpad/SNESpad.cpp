@@ -25,18 +25,11 @@
 */
 
 #include "SNESpad.h"
+#include "digitalWriteFast.h"
 
 #ifdef ARDUINO
 #include "Arduino.h"
 #endif
-
-// -1 in der Pin-Belegung heisst "nicht angeschlossen" (siehe DATA1/IOSEL in
-// Game.cpp). Als uint8_t kommt davon 255 an, und pinMode()/digitalWrite()/
-// digitalRead() greifen damit weit hinter das Ende der 70 Eintraege langen
-// Arduino-Pintabellen: der so gelesene "Port" ist irgendein Flash-Byte, und
-// geschrieben wird anschliessend in eine beliebige RAM-Adresse. Alle Zugriffe
-// auf solche Pins werden deshalb ausdruecklich abgefangen.
-#define SNES_PIN_NC 255
 
 SNESpad::SNESpad(int clock, int latch, int data0, int data1, int select) {
   latchPin = latch;
@@ -55,16 +48,14 @@ void custom_delay_us(unsigned int delay_value) {
 }
 
 void custom_write(uint8_t outPin, uint8_t dir) {
-  if (outPin == SNES_PIN_NC) return; // Pin nicht angeschlossen
 #ifdef ARDUINO
-    digitalWrite(outPin, dir ? HIGH:LOW);
+    digitalWriteFast(outPin, dir ? HIGH:LOW);
 #else
     gpio_put(outPin, dir ? 1:0);
 #endif
 }
 
 uint8_t custom_read(uint8_t inPin) {
-  if (inPin == SNES_PIN_NC) return 1; // offener Eingang: Pull-up haelt HIGH
 #ifdef ARDUINO
     return digitalRead(inPin);
 #else
@@ -154,6 +145,7 @@ void SNESpad::poll() {
                       buttonR =        (state & SNES_R);
   
                       break;
+                  /* ---- NES controller support disabled ----
                   case SNES_PAD_NES:
                       directionLeft =  (state & SNES_LEFT);
                       directionUp =    (state & SNES_UP);
@@ -166,6 +158,8 @@ void SNESpad::poll() {
                       buttonA =        (state & SNES_B);
   
                       break;
+                  */
+                  /* ---- Mouse support disabled ----
                   case SNES_PAD_MOUSE:
                       int x = 127;  //set center position [0-255]
                       int y = 127;
@@ -188,6 +182,7 @@ void SNESpad::poll() {
                       buttonA = (state & SNES_A);
   
                       break;
+                  */
               }
   
   #if SNES_PAD_DEBUG==true
@@ -223,15 +218,14 @@ void SNESpad::poll() {
 void SNESpad::init() {
 #ifdef ARDUINO
   // Code specific to Arduino
-  // nicht angeschlossene Pins (-1 -> 255) auslassen, s. SNES_PIN_NC
-  if (clockPin != SNES_PIN_NC) pinMode(clockPin, OUTPUT);
-  if (latchPin != SNES_PIN_NC) pinMode(latchPin, OUTPUT);
-  if (data0Pin != SNES_PIN_NC) pinMode(data0Pin, INPUT);
-  if (data1Pin != SNES_PIN_NC) pinMode(data1Pin, INPUT);
-  if (iobitPin != SNES_PIN_NC) pinMode(iobitPin, OUTPUT);
+  pinMode(clockPin,  OUTPUT);
+  pinMode(latchPin, OUTPUT);
+  pinMode(data0Pin, INPUT);
+  pinMode(data1Pin, INPUT);
+  pinMode(iobitPin, OUTPUT);
 
-  custom_write(data0Pin, 1); // pull_up
-  custom_write(data1Pin, 1);
+  digitalWriteFast(data0Pin, HIGH); // pull_up
+  digitalWriteFast(data1Pin, HIGH);
 #else
   // Code specific to Pico SDK
   gpio_init(clockPin);
@@ -255,6 +249,8 @@ void SNESpad::init() {
 // signal mouse to go to next speed if not at desired speed
 void SNESpad::setMouseSpeed()
 {
+  // ---- Mouse support disabled ----
+  /*
   // default mouse to fastest speed
   if (type == SNES_PAD_MOUSE &&
       mouseSpeedFails < SNES_MOUSE_THRESHOLD &&
@@ -267,6 +263,7 @@ void SNESpad::setMouseSpeed()
     custom_write(clockPin, 1);
     custom_delay_us(12);
   }
+  */
 }
 
 // clock in a data bit
@@ -307,15 +304,17 @@ void SNESpad::latch()
   custom_write(latchPin, 1);
   custom_delay_us(12);
 
-  setMouseSpeed();
+  // ---- Mouse support disabled ----
+  // setMouseSpeed();
 
   custom_write(latchPin, 0);
   custom_delay_us(12);
 }
 
 XbandKeyMapping SNESpad::getKeyFromScancode(uint8_t scancode, bool special) {
+  // ---- Keyboard support disabled ----
   XbandKeyMapping key = {"unused", 0, 0};
-
+  /*
   if (special) {
     // Special Scancodes (preceded by SNES_KEY_SPECIAL scancode)
     switch (scancode) {
@@ -339,17 +338,20 @@ XbandKeyMapping SNESpad::getKeyFromScancode(uint8_t scancode, bool special) {
     // Normal Scancodes
     key = keyMapping[(scancode & 0x0f)][((scancode & 0xf0) >> 4)];
   }
-
+  */
   return key;
 }
 
 bool SNESpad::setCapsLockLed(bool enabled) {
-  capsLocked = enabled;
-  return capsLocked;
+  // ---- Keyboard support disabled ----
+  // capsLocked = enabled;
+  return false;
 }
 
 bool SNESpad::readKeyboard(bool readonlyID)
 {
+  // ---- Keyboard support disabled ----
+  /*
   uint8_t kid = 0;
   uint8_t num = 0;
   uint8_t i, n;
@@ -417,6 +419,8 @@ bool SNESpad::readKeyboard(bool readonlyID)
 
   // scancodes ready
   return kid == SNES_KEYBOARD_ID;
+  */
+  return false;
 }
 
 uint32_t SNESpad::read()
@@ -441,16 +445,13 @@ uint32_t SNESpad::read()
     }
   }
 
-  // check and read keyboard
-  // Die Xband-Tastatur laesst sich nur ueber IOSEL anstossen. Ist der Pin nicht
-  // angeschlossen (IOSEL -1), kann readKeyboard() nie eine finden - die sechs
-  // zusaetzlichen Taktzyklen kosten dann nur Zeit (~0,25 ms je Abfrage) und
-  // bremsen Display::refresh() aus.
-  bool isKeyboard = (iobitPin != SNES_PIN_NC) && readKeyboard(readonlyID);
+  // ---- Keyboard support disabled ----
+  // bool isKeyboard = readKeyboard(readonlyID);
+  bool isKeyboard = false;
 
   dat = ~dat; // ctrlr buttons are active low, so invert bits
 
-  // verify controller or mouse is connected
+  // verify controller is connected
   if (!isKeyboard && disconnected && !(dat & 0xffff)) {
       type = SNES_PAD_NONE;
       mouseSpeedFails = 0;
@@ -460,17 +461,21 @@ uint32_t SNESpad::read()
 
   // check device type id
   bool isSNES = ((dat & SNES_DEVICE_ID) >> 12) == SNES_PAD_ID;
-  bool isMouse = ((dat & SNES_DEVICE_ID) >> 12) == SNES_MOUSE_ID;
-  bool isNES = ~dat && ((dat >> 8) & 0xff) == 0xff  ;
+  // ---- Mouse detection disabled ----
+  // bool isMouse = ((dat & SNES_DEVICE_ID) >> 12) == SNES_MOUSE_ID;
+  // ---- NES detection disabled ----
+  // bool isNES = ~dat && ((dat >> 8) & 0xff) == 0xff  ;
 
-  // verify mouse speed
-  if (isKeyboard) {
-      type = SNES_PAD_KEYBOARD;
-  } else if (isSNES) {
+  if (isSNES) {
       type = SNES_PAD_CONTROLLER;
-  } else if (isNES) {
+  }
+  /* ---- NES controller support disabled ----
+  else if (isNES) {
       type = SNES_PAD_NES;
-  } else if (isMouse) {
+  }
+  */
+  /* ---- Mouse support disabled ----
+  else if (isMouse) {
       uint8_t lastMouseSpeed = mouseSpeed;
 
       // parse mouse speed bits
@@ -487,7 +492,9 @@ uint32_t SNESpad::read()
       }
 
       type = SNES_PAD_MOUSE;
-  } else {
+  }
+  */
+  else {
       type = SNES_PAD_NONE; //UNKNOWN device id
 
       #if SNES_PAD_DEBUG==true
