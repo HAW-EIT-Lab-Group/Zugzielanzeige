@@ -87,8 +87,7 @@ void Display::refresh(){
     //Display::enable(1); // turn off while calculating other things, prevents last line from looking brighter
 }
 
-// enable(red,green), active LOW -> 1 = off, 0 = on
-// example: enable(0,1) -> red on, green off
+// enable(<en>), active LOW -> 1 = off, 0 = on
 void Display::enable(uint8_t en){
     digitalWriteFast(PIN_EN,en);
 }
