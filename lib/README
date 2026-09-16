@@ -1,44 +1,49 @@
 ___
 ### Game
-calculates Pacman game
+berechnet das Pacman-Spiel und stellt es mit hilfe von den nachfolgenden lib/funktionen auf der ZZA dar
 ___
-### SNESpad
-provides functions for reading input from SNESpad controllers to be used in "Game"
+### SNESpad  
+bietet Funktionen zum Auslesen von Eingaben von SNESpad-Controllern, die in "Game" verwendet werden sollen
+
 ___
-### Graphics
-Provides basic functions to write to a bitmap readable by the "display" lib.  
-Important: Changing the bitmat doesnt directly affect the display, for the changes to be displayed call "display::refresh()".  
+### Graphics 
+Bietet grundlegende Funktionen, um in ein Bitmap zu schreiben, das von der "display"-Bibliothek gelesen werden kann.
+Das Bitmap selbst hat eine ungewöhnliche Struktur, um das Schreiben auf die Pins unter Verwendung des gesamten Ports gleichzeitig zu ermöglichen (was ein 8-mal schnelleres Schreiben ermöglicht). Ich habe versucht, hier zu zeigen, wie es aufgebaut ist:
+![alt text](../bilder/ErklärungBitmap1.png)
+![alt text](../bilder/ErklärungBitmap2.png)
 
-(see [Graphics.h](Graphics/Graphics.h) for more details on the functions)
+Wichtig: Änderungen am Bitmap wirken sich nicht direkt auf das Display aus. Um die Änderungen anzuzeigen, muss "display::refresh()" aufgerufen werden.
 
-**clear()**:  
-clears whole bitmap 
+(siehe [Graphics.h](Graphics/Graphics.h) für weitere Details zu den Funktionen)
 
-**fill(color)**:  
-fill whole bitmap with a color 
+**clear()**:
+löscht das gesamte Bitmap
 
-**drawPixel(x,y,color)**:  
-set single pixel to one color
+**fill(color)**:
+füllt das gesamte Bitmap mit einer Farbe
 
-**drawRect(x1,y1,x2,y2,color)**:  
-draw rectangle of a certain color, calls "drawPixel()" and is therefore not more efficient
+**drawPixel(x,y,color)**:
+setzt einen einzelnen Pixel auf eine Farbe
 
-**loadImage()**:  
-loads image stored in [imageData.h](../include/imageData.h) into the bitmap.   
-To generate an imageData.h file use [imageToBitmap.py](../src/imageToBitmap.py) 
->image_to_bitmap_cpp("\<input filename>.png", "\<output filename>")  
+**drawRect(x1,y1,x2,y2,color)**:
+zeichnet ein Rechteck in einer bestimmten Farbe, ruft "drawPixel()" auf und ist daher nicht effizienter
 
-(details in .py file)
+**loadImage()**:
+lädt ein Bild, das in [imageData.h](../include/imageData.h) gespeichert ist, in das Bitmap.
+Um eine imageData.h-Datei zu generieren, verwenden Sie [imageToBitmap.py](../src/imageToBitmap.py):
+>image_to_bitmap_cpp("<Input-Dateiname>.png", "<Ausgabedateiname>")
+
+(Details in der .py-Datei)
 
 ___
 ### Display
-controls pins on arduino to write to the Display.
+steuert die Pins auf dem Arduino, um auf das Display zu schreiben.
 
-**init()**:  
-configures Arduino pins, for details on the pins see [Display.cpp](Display/Display.cpp)
+**init()**:
+konfiguriert die Arduino-Pins. Für Details zu den Pins siehe [Display.cpp](Display/Display.cpp)
 
-**refresh()**:  
-Sets physical pins on the arduino according to bitmap provided by "graphics" lib
+**refresh()**:
+Setzt die physischen Pins auf dem Arduino gemäß dem Bitmap, das von der "graphics"-Bibliothek bereitgestellt wird
 
-**enable(en)**:  
-Turns whole display on/off
+**enable(en)**:
+Schaltet das gesamte Display ein/aus

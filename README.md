@@ -17,6 +17,8 @@
 
 
 ---
+Details zum code in [lib/README](lib/README)
+---
 ## Aufbau ZZA
 200x64 Pixel, jeweils die Farben Rot und Grün seperat über Schieberegister mit 5V Logik ansteuerbar.
 
