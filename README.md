@@ -148,8 +148,11 @@ Globale Signale:
     - index fehler in code?
 
 ### Todo
-- hitboxen sind zu groß
-- falsche pixel durch timing probleme
+- falsche pixel durch timing probleme fixen
+  - drawRect() nutzen, verschiedene varianten testen
+  - clock speed für SNESpad readout erhöhen ([SNESpad.cpp](lib/SNESpad/SNESpad.cpp), SNESpad::clock, line ~270)
+  - statt alle 32 bits gleichzeitig einzulesen, pro clk cycle n bits einlesen und nach 32/n clk cycles auswerten
+
 
 
 
