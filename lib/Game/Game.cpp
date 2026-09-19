@@ -36,7 +36,7 @@ enum Input{TASTATUR, CONTROLLER};
 SNESpad snespad(CLOCK, LATCH, DATA0, DATA1, IOSEL);
 
 // Mindestabstand zwischen zwei Controllerabfragen (s. eingabeLesen())
-#define CONTROLLER_POLL_MS 160
+#define CONTROLLER_POLL_MS 15
 
 
 
@@ -144,6 +144,7 @@ SNESpad snespad(CLOCK, LATCH, DATA0, DATA1, IOSEL);
 #define HAUS_GATE_X 71    // Mitte der Tür
 #define HAUS_EXIT_Y 23    // erster boxfreier Anker oberhalb der Tür
 #define HAUS_WARTE_Y 32   // Wartehöhe im Haus
+#define HAUS_ERHOLUNG_MS 2000 // so lange bleibt ein gefressener Geist in der Hausmitte
 #define HAUS_PINKY_X 67
 #define HAUS_INKY_X 75
 
@@ -213,7 +214,10 @@ enum SpielStatus { STARTBILDSCHIRM, BEREIT, LAEUFT, TOD_FREEZE, TOD_ANIM, TOD_WA
 // AUGEN: gefressener Geist, der als reines Augenpaar zurück ins Haus wandert.
 // In diesem Zustand hat er KEINE Hitbox - er kann Pacman weder töten noch
 // erneut gefressen werden.
-enum GeistZustand { IM_HAUS, VERLAESST_HAUS, DRAUSSEN, AUGEN };
+// ERHOLT_SICH: die Augen sind in der Hausmitte angekommen, der Geist ist
+// wieder komplett und wartet HAUS_ERHOLUNG_MS, bevor er hinausläuft. Auch
+// hier keine Hitbox (Pacman passt ohnehin nicht ins Haus).
+enum GeistZustand { IM_HAUS, VERLAESST_HAUS, DRAUSSEN, AUGEN, ERHOLT_SICH };
 
 // Aus bild.png ausgeschnittenes Pacman-Sprite (0=schwarz,3=gelb), Mundöffnung
 // nach rechts. Für die anderen 3 Richtungen von Hand gespiegelt/gedreht, da
@@ -447,6 +451,7 @@ struct Geist
     Richtung richtung;
     GeistZustand zustand;
     bool aengstlich; // während des Energizers: fressbar statt tödlich
+    unsigned long wartStart; // Beginn der Pause im Haus (Zustand ERHOLT_SICH)
 };
 static Geist geister[GEIST_ANZAHL];
 
@@ -1161,7 +1166,7 @@ static void kollisionPruefen()
     for (uint8_t i = 0; i < GEIST_ANZAHL; i++)
     {
         Geist &g = geister[i];
-        if (g.zustand == IM_HAUS || g.zustand == AUGEN) continue;
+        if (g.zustand == IM_HAUS || g.zustand == AUGEN || g.zustand == ERHOLT_SICH) continue;
         if (!nah(pacmanX, pacmanY, g.x, g.y)) continue;
 
         if (g.aengstlich) { geistGefressen(i); continue; }
@@ -1412,8 +1417,11 @@ static void bewegeAugen(uint8_t idx)
 {
     Geist &g = geister[idx];
 
-    // Phase 2: über/unter der Tür -> senkrecht ins Haus
-    if (g.x == HAUS_GATE_X && g.y >= HAUS_EXIT_Y)
+    // Phase 2: über der Tür -> senkrecht ins Haus. Nur zwischen Ausgang und
+    // Wartehöhe - vorher reichte g.y >= HAUS_EXIT_Y, dadurch galten auch
+    // Augen, die im Gang UNTER dem Haus an x=HAUS_GATE_X vorbeiliefen, als
+    // "angekommen" und liefen von unten durch die Wände ins Haus.
+    if (g.x == HAUS_GATE_X && g.y >= HAUS_EXIT_Y && g.y <= HAUS_WARTE_Y)
     {
         if (g.y < HAUS_WARTE_Y)
         {
@@ -1421,9 +1429,10 @@ static void bewegeAugen(uint8_t idx)
             g.y++;
             return;
         }
-        // unten angekommen -> der Geist ist wieder komplett und läuft hinaus
-        g.zustand = VERLAESST_HAUS;
+        // in der Mitte angekommen -> Geist ist wieder komplett, wartet kurz
+        g.zustand = ERHOLT_SICH;
         g.richtung = OBEN;
+        g.wartStart = millis();
         return;
     }
 
@@ -1465,6 +1474,14 @@ static void geistSchritt(uint8_t idx)
     Geist &g = geister[idx];
     if (g.zustand == IM_HAUS) return; // wartet noch auf seine Freigabe
 
+    // Nach dem Gefressenwerden: steht HAUS_ERHOLUNG_MS in der Hausmitte,
+    // dann geht es wie beim ersten Verlassen wieder hinaus
+    if (g.zustand == ERHOLT_SICH)
+    {
+        if (millis() - g.wartStart >= HAUS_ERHOLUNG_MS) g.zustand = VERLAESST_HAUS;
+        return;
+    }
+
     if (g.zustand == AUGEN) bewegeAugen(idx);
     else if (g.zustand == VERLAESST_HAUS) bewegeGeistImHaus(idx);
     else bewegeGeistDraussen(idx);
@@ -1503,30 +1520,33 @@ static void controllerVerarbeiten()
     static bool warGedrueckt = false; // Stand der vorherigen Abfrage
     bool key_pressed = false;
     snespad.poll();
-    // D-Pad (Steuerkreuz)
-    if (snespad.directionUp) {
-        gewuenschteRichtung = OBEN;
-        //Serial.println("D-Pad Up is pressed.");
+
+    // D-Pad (Steuerkreuz): ein Bit pro Richtung, Bitnummer = Richtung-Enum
+    static uint8_t vorherRichtungen = 0;
+    uint8_t richtungen = 0;
+    if (snespad.directionUp)    richtungen |= 1 << OBEN;
+    if (snespad.directionDown)  richtungen |= 1 << UNTEN;
+    if (snespad.directionLeft)  richtungen |= 1 << LINKS;
+    if (snespad.directionRight) richtungen |= 1 << RECHTS;
+
+    // Beim Abrollen über das Kreuz sind kurz zwei Richtungen gleichzeitig
+    // gedrückt (diagonal). Vorher gewann dann immer oben > unten > links >
+    // rechts, egal was man eigentlich wollte. Jetzt gewinnt die zuletzt dazu
+    // gedrückte Richtung; ohne neue bleibt die aktuelle, solange sie gehalten wird.
+    uint8_t neu = richtungen & ~vorherRichtungen;
+    vorherRichtungen = richtungen;
+    uint8_t auswahl = neu ? neu : richtungen;
+    if (auswahl) {
         key_pressed = true;
+        if (neu || !(richtungen & (1 << gewuenschteRichtung))) {
+            for (uint8_t r = OBEN; r <= RECHTS; r++) {
+                if (auswahl & (1 << r)) { gewuenschteRichtung = (Richtung)r; break; }
+            }
+        }
     }
-    else if (snespad.directionDown) {
-        gewuenschteRichtung = UNTEN;
-        //Serial.println("D-Pad Down is pressed.");
-        key_pressed = true;
-    }
-    else if (snespad.directionLeft) {
-        gewuenschteRichtung = LINKS;
-        //Serial.println("D-Pad Left is pressed.");
-        key_pressed = true;
-    }
-    else if (snespad.directionRight) {
-        gewuenschteRichtung = RECHTS;
-        //Serial.println("D-Pad Right is pressed.");
-        key_pressed = true;
-    }
-    
+
     // Aktionstasten
-    else if (snespad.buttonA) {
+    if (snespad.buttonA) {
         Serial.println("Button A is pressed.");
         key_pressed = true;
     }
