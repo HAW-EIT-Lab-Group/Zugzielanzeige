@@ -36,7 +36,7 @@ enum Input{TASTATUR, CONTROLLER};
 SNESpad snespad(CLOCK, LATCH, DATA0, DATA1, IOSEL);
 
 // Mindestabstand zwischen zwei Controllerabfragen (s. eingabeLesen())
-#define CONTROLLER_POLL_MS 10
+#define CONTROLLER_POLL_MS 160
 
 
 

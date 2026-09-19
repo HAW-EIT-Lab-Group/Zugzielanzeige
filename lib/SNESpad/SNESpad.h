@@ -228,6 +228,13 @@
 #define KEY_DOWN_ARROW      0xd9
 #define KEY_LEFT_ARROW      0xd8
 #define KEY_RIGHT_ARROW     0xd7
+
+#define CLOCK 5
+#define LATCH 6
+#define DATA0 7
+#define DATA1 -1 // optional (required for super multitap, scope, xband keyboard, etc)
+#define IOSEL -1 //
+
 #endif
 
 typedef struct {
