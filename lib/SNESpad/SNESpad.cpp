@@ -49,9 +49,9 @@ void custom_delay_us(unsigned int delay_value) {
 
 void custom_write(uint8_t outPin, uint8_t dir) {
 #ifdef ARDUINO
-    digitalWriteFast(DATA0, dir ? HIGH:LOW);
+    digitalWriteFast(outPin, dir ? HIGH:LOW);
 #else
-    gpio_put(DATA0, dir ? 1:0);
+    gpio_put(outPin, dir ? 1:0);
 #endif
 }
 
@@ -218,14 +218,14 @@ void SNESpad::poll() {
 void SNESpad::init() {
 #ifdef ARDUINO
   // Code specific to Arduino
-  pinModeFast(CLOCK,  OUTPUT);
-  pinModeFast(LATCH, OUTPUT);
-  pinModeFast(DATA0, INPUT);
-  pinModeFast(DATA1, INPUT);
-  pinModeFast(IOSEL, OUTPUT);
+  pinModeFast(clockPin,  OUTPUT);
+  pinModeFast(latchPin, OUTPUT);
+  pinModeFast(data0Pin, INPUT);
+  pinModeFast(data1Pin, INPUT);
+  pinModeFast(iobitPin, OUTPUT);
 
-  digitalWriteFast(DATA0, HIGH); // pull_up
-  digitalWriteFast(DATA1, HIGH);
+  digitalWriteFast(data0Pin, HIGH); // pull_up
+  digitalWriteFast(data1Pin, HIGH);
 #else
   // Code specific to Pico SDK
   gpio_init(clockPin);
