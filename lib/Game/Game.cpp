@@ -1497,7 +1497,11 @@ static void tasteVerarbeiten(char c)
 
 static void controllerVerarbeiten()
 {
-    static bool key_pressed = false;
+    // key_pressed gilt nur für diese Abfrage. War es static und wurde nie
+    // zurückgesetzt, blieb es nach dem ersten Tastendruck für immer true -
+    // der Game-Over-Bildschirm startete dann nach einer Sekunde von selbst neu.
+    static bool warGedrueckt = false; // Stand der vorherigen Abfrage
+    bool key_pressed = false;
     snespad.poll();
     // D-Pad (Steuerkreuz)
     if (snespad.directionUp) {
@@ -1560,10 +1564,15 @@ static void controllerVerarbeiten()
     }
 
 
-    // Start- und Game-Over-Bildschirm reagieren auf jede Taste
-    if (spielStatus == STARTBILDSCHIRM && key_pressed) { spielStarten(); return; }
+    // Nur ein neuer Tastendruck zählt - eine aus dem Spiel heraus gehaltene
+    // Taste (z.B. das Steuerkreuz beim Sterben) startet nicht von selbst neu
+    bool neuGedrueckt = key_pressed && !warGedrueckt;
+    warGedrueckt = key_pressed;
 
-    if (spielStatus == GAMEOVER && key_pressed)
+    // Start- und Game-Over-Bildschirm reagieren auf jede Taste
+    if (spielStatus == STARTBILDSCHIRM && neuGedrueckt) { spielStarten(); return; }
+
+    if (spielStatus == GAMEOVER && neuGedrueckt)
     {
         // Eingabe wird erst nach einer Sekunde angenommen, damit ein
         // Tastendruck aus dem laufenden Spiel nicht sofort neu startet

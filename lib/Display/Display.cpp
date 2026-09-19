@@ -83,7 +83,18 @@ void Display::refresh(){
 
         Display::enable(0);
     }
-    // row 15 stays lit with its own data while other things are calculated (may look brighter)
+    // Every row is lit for one shift time (while the next row is shifted in).
+    // Row 15 has no next row: shift in an empty row instead (same duration)
+    // and latch it, so nothing is lit while Game::update() runs. Otherwise
+    // row 15/31/47/63 would stay lit much longer and glow brighter.
+    // Works without relying on the enable pin.
+    for(int x = 0; x<WIDTH;x++){
+        PORTA = 0x00;
+        digitalWriteFast(PIN_CLK, true);
+        digitalWriteFast(PIN_CLK, false);
+    }
+    digitalWriteFast(PIN_STR, true);
+    digitalWriteFast(PIN_STR, false);
 }
 
 // enable(<en>), active LOW -> 1 = off, 0 = on
