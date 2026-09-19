@@ -49,7 +49,7 @@ void custom_delay_us(unsigned int delay_value) {
 
 void custom_write(uint8_t outPin, uint8_t dir) {
 #ifdef ARDUINO
-    digitalWriteFast(outPin, dir ? HIGH:LOW);
+    digitalWrite(outPin, dir ? HIGH:LOW);
 #else
     gpio_put(outPin, dir ? 1:0);
 #endif
@@ -218,14 +218,14 @@ void SNESpad::poll() {
 void SNESpad::init() {
 #ifdef ARDUINO
   // Code specific to Arduino
-  pinModeFast(clockPin,  OUTPUT);
-  pinModeFast(latchPin, OUTPUT);
-  pinModeFast(data0Pin, INPUT);
-  pinModeFast(data1Pin, INPUT);
-  pinModeFast(iobitPin, OUTPUT);
+  pinMode(clockPin,  OUTPUT);
+  pinMode(latchPin, OUTPUT);
+  pinMode(data0Pin, INPUT);
+  pinMode(data1Pin, INPUT);
+  pinMode(iobitPin, OUTPUT);
 
-  digitalWriteFast(data0Pin, HIGH); // pull_up
-  digitalWriteFast(data1Pin, HIGH);
+  digitalWrite(data0Pin, HIGH); // pull_up
+  digitalWrite(data1Pin, HIGH);
 #else
   // Code specific to Pico SDK
   gpio_init(clockPin);
@@ -261,7 +261,7 @@ void SNESpad::setMouseSpeed()
     custom_delay_us(6);
 
     custom_write(clockPin, 1);
-    custom_delay_us(12);
+    custom_delay_us(6);
   }
   */
 }
@@ -272,12 +272,12 @@ uint32_t SNESpad::clock(uint8_t datPin)
   uint32_t ret = 0;
 
   custom_write(clockPin, 0);
-  custom_delay_us(12);
+  custom_delay_us(6);
 
   ret = custom_read(datPin);
 
   custom_write(clockPin, 1);
-  custom_delay_us(12);
+  custom_delay_us(6);
 
   return ret;
 }
@@ -288,12 +288,12 @@ uint32_t SNESpad::clock(uint8_t dat0Pin, uint8_t dat1Pin)
   uint32_t ret = 0;
 
   custom_write(clockPin, 0);
-  custom_delay_us(12);
+  custom_delay_us(6);
 
   ret = custom_read(dat0Pin) | ((custom_read(dat1Pin) & 1) << 1);
 
   custom_write(clockPin, 1);
-  custom_delay_us(12);
+  custom_delay_us(6);
 
   return ret;
 }
@@ -302,13 +302,13 @@ uint32_t SNESpad::clock(uint8_t dat0Pin, uint8_t dat1Pin)
 void SNESpad::latch()
 {
   custom_write(latchPin, 1);
-  custom_delay_us(12);
+  custom_delay_us(6);
 
   // ---- Mouse support disabled ----
   // setMouseSpeed();
 
   custom_write(latchPin, 0);
-  custom_delay_us(12);
+  custom_delay_us(6);
 }
 
 XbandKeyMapping SNESpad::getKeyFromScancode(uint8_t scancode, bool special) {
@@ -441,7 +441,7 @@ uint32_t SNESpad::read()
     if (i == 15) {
         bool read_extra = !bit; // check if mouse
         if (!read_extra) break; // skip extra bytes if not
-        custom_delay_us(12);
+        custom_delay_us(6);
     }
   }
 
