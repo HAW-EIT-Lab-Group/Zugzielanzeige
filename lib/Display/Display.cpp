@@ -63,28 +63,27 @@ void Display::init(){
 
 // Set whole Diplay to the values from bitmap
 void Display::refresh(){
-    //Display::enable(0); // turn display on
     for (int y = 0; y<HEIGHT_SECTION; y++) {
-        uint8_t yfix;
-        if(y == 15) yfix = 0;
-        else yfix = y + 1;
-        
-        //Row selection
-        PORTL = (PORTL & 0xf0) | (0x0f & y); // clear bits, copy masked y into register
-
-        
+        // Shift in data of row y (not visible yet, previous row stays lit meanwhile)
         for(int x = 0; x<WIDTH;x++){
-            PORTA = Graphics::bitmap[x][yfix];
+            PORTA = Graphics::bitmap[x][y];
             digitalWriteFast(PIN_CLK, true);
             digitalWriteFast(PIN_CLK, false);
         }
 
-        // Latch the whole display
+        // Blank while row and data change, so row y never shows data of another row
+        Display::enable(1);
+
+        //Row selection
+        PORTL = (PORTL & 0xf0) | (0x0f & y); // clear bits, copy masked y into register
+
+        // Latch the whole display -> data of row y is shown on row y
         digitalWriteFast(PIN_STR, true);
         digitalWriteFast(PIN_STR, false);
 
+        Display::enable(0);
     }
-    //Display::enable(1); // turn off while calculating other things, prevents last line from looking brighter
+    // row 15 stays lit with its own data while other things are calculated (may look brighter)
 }
 
 // enable(<en>), active LOW -> 1 = off, 0 = on
